@@ -18,7 +18,7 @@ HEADERS = {
 # Local image path ONLY
 # ----------------------------
 # Example:"C:\\Users\\Engineer\\Desktop\\fake-photo\\12.png"
-IMAGE_PATH = Path("")  #<- add the image path in here then run the code
+IMAGE_PATH = Path("Ai-Photo-Detector\tests\images\<YOUR_IMAGE_NAME>")  #<- add the image path in here then run the code
 
 if not IMAGE_PATH.exists():
     raise FileNotFoundError(f"Image not found: {IMAGE_PATH}")
