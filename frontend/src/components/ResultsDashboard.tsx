@@ -2,8 +2,7 @@ import { AnalysisResult } from "../App";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { CheckCircle, AlertTriangle, XCircle, Calendar, FileText } from "lucide-react";
-import { Button } from "./ui/button";
+import { CheckCircle, AlertTriangle, XCircle, Calendar } from "lucide-react";
 
 interface ResultsDashboardProps {
   results: AnalysisResult[];
@@ -11,7 +10,11 @@ interface ResultsDashboardProps {
   onSelectResult: (result: AnalysisResult) => void;
 }
 
-export function ResultsDashboard({ results, selectedResult, onSelectResult }: ResultsDashboardProps) {
+export function ResultsDashboard({
+  results,
+  selectedResult,
+  onSelectResult,
+}: ResultsDashboardProps) {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pass":
@@ -38,9 +41,21 @@ export function ResultsDashboard({ results, selectedResult, onSelectResult }: Re
     }
   };
 
+  const indicatorDescriptions: Record<string, string> = {
+    "Pixel Consistency":
+      "Checks if pixels look too smooth or artificially generated.",
+    "Noise Patterns":
+      "Detects unnatural noise patterns compared to real camera images.",
+    "Edge Detection":
+      "Looks for unnatural sharp or blurred edges typical of AI images.",
+    "Color Distribution":
+      "Analyzes unusual color patterns often seen in AI-generated images.",
+    "Frequency Analysis":
+      "Examines frequency signals that can reveal synthetic image creation.",
+  };
+
   return (
     <div className="space-y-6">
-      {/* Main Result Card */}
       <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-1/2">
@@ -50,6 +65,7 @@ export function ResultsDashboard({ results, selectedResult, onSelectResult }: Re
               className="w-full h-64 object-cover rounded-lg border-2 border-[#8d70b3]/30 shadow-sm"
             />
           </div>
+
           <div className="md:w-1/2 space-y-4">
             <div>
               <h3 className="text-gray-900 mb-1">{selectedResult.fileName}</h3>
@@ -69,10 +85,13 @@ export function ResultsDashboard({ results, selectedResult, onSelectResult }: Re
                   {selectedResult.isAIGenerated ? "AI Generated" : "Real Photo"}
                 </Badge>
               </div>
+
               <div>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-gray-600">Confidence Score</span>
-                  <span className="text-gray-900">{selectedResult.confidence.toFixed(1)}%</span>
+                  <span className="text-gray-900">
+                    {selectedResult.confidence.toFixed(1)}%
+                  </span>
                 </div>
                 <Progress value={selectedResult.confidence} className="h-2" />
               </div>
@@ -99,41 +118,57 @@ export function ResultsDashboard({ results, selectedResult, onSelectResult }: Re
         </div>
       </Card>
 
-      {/* Detection Indicators */}
       <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
         <h3 className="text-gray-900 mb-4">Detection Indicators</h3>
         <div className="space-y-4">
           {selectedResult.indicators.map((indicator, index) => (
             <div key={index} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-start gap-2">
                   {getStatusIcon(indicator.status)}
-                  <span className="text-sm text-gray-900">{indicator.label}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-900">
+                      {indicator.label}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {indicatorDescriptions[indicator.label] || ""}
+                    </span>
+                  </div>
                 </div>
+
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">{indicator.value.toFixed(1)}%</span>
-                  <Badge variant="outline" className={`text-xs border ${getStatusColor(indicator.status)}`}>
+                  <span className="text-sm text-gray-600">
+                    {indicator.value.toFixed(1)}%
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs border ${getStatusColor(indicator.status)}`}
+                  >
                     {indicator.status}
                   </Badge>
                 </div>
               </div>
+
               <Progress value={indicator.value} className="h-1.5" />
             </div>
           ))}
         </div>
       </Card>
 
-      {/* Summary */}
       <Card className="p-6 bg-gradient-to-br from-[#b690e6]/60 via-[#a280cc]/40 to-[#8d70b3]/60 border-[#8d70b3] shadow-md">
         <h3 className="text-gray-900 mb-2">Analysis Summary</h3>
         <p className="text-gray-700 text-sm leading-relaxed">
-          Based on our advanced AI detection algorithms, this image has been analyzed across
-          multiple indicators including pixel consistency, noise patterns, edge detection, and
-          color distribution. The overall confidence score of{" "}
-          <span className="font-medium">{selectedResult.confidence.toFixed(1)}%</span> indicates
-          that this image is{" "}
+          Based on our advanced AI detection algorithms, this image has been analyzed
+          across multiple indicators including pixel consistency, noise patterns, edge
+          detection, and color distribution. The overall confidence score of{" "}
           <span className="font-medium">
-            {selectedResult.isAIGenerated ? "likely AI-generated" : "likely a real photograph"}
+            {selectedResult.confidence.toFixed(1)}%
+          </span>{" "}
+          indicates that this image is{" "}
+          <span className="font-medium">
+            {selectedResult.isAIGenerated
+              ? "likely AI-generated"
+              : "likely a real photograph"}
           </span>
           .
         </p>
