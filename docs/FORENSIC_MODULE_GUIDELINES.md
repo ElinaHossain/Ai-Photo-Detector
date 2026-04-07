@@ -145,3 +145,82 @@ The main pipeline will combine all forensic results automatically.
 Your responsibility is only to return a correctly formatted dictionary.
 
 Keep your module focused, consistent, and stable.
+
+## 7. Details Field Templates (Per Forensic Test)
+
+The `details` field is specific to each forensic test and must include meaningful, structured data.
+
+Use the following templates as a **minimum requirement**. You may add additional fields if needed, but do not remove these.
+
+### EXIF Metadata Analysis
+
+```python
+"details": {
+    "exif_present": bool,
+    "software_tag": str | None,
+    "camera_model": str | None
+}
+```
+
+### Error Level Analysis (ELA)
+
+```python
+"details": {
+    "mean_error": float,
+    "high_error_regions": int
+}
+```
+
+### JPEG Compression Artifact Analysis
+
+```python
+"details": {
+    "block_inconsistency_score": float
+}
+```
+
+### Lighting & Shadow Consistency Analysis
+
+```python
+"details": {
+    "light_direction_variance": float
+}
+```
+
+### Copy–Move (Clone) Detection
+
+```python
+"details": {
+    "matching_regions": int
+}
+```
+
+### Noise Pattern / Texture Consistency Analysis
+
+```python
+"details": {
+    "noise_variance_score": float
+}
+```
+
+### Edge & Boundary Inconsistency Detection
+
+```python
+"details": {
+    "edge_discontinuity_score": float
+}
+```
+
+### Resampling / Scaling Detection
+
+```python
+"details": {
+    "resampling_probability": float
+}
+```
+
+### Important
+
+- details must always be a dictionary.
+- Must include at least the fields listed above.
+- Do not return unstructured text (e.g., "looks suspicious").
