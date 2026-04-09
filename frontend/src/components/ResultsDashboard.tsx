@@ -2,8 +2,7 @@ import { AnalysisResult } from "../App";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { CheckCircle, AlertTriangle, XCircle, Calendar, FileText } from "lucide-react";
-import { Button } from "./ui/button";
+import { CheckCircle, AlertTriangle, XCircle, Calendar, FileText, Flame } from "lucide-react";
 
 interface ResultsDashboardProps {
   results: AnalysisResult[];
@@ -12,6 +11,25 @@ interface ResultsDashboardProps {
 }
 
 export function ResultsDashboard({ results, selectedResult, onSelectResult }: ResultsDashboardProps) {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
+  const rawHeatmapUrl = selectedResult.ela?.heatmap?.url;
+  const heatmapUrl = rawHeatmapUrl
+    ? rawHeatmapUrl.startsWith("data:")
+      ? rawHeatmapUrl
+      : apiBaseUrl
+        ? new URL(rawHeatmapUrl, apiBaseUrl).toString()
+        : rawHeatmapUrl
+    : null;
+
+  const formatPercentMetric = (value?: number) => (typeof value === "number" ? `${value.toFixed(2)}%` : "N/A");
+  const formatRatioMetric = (value?: number) => {
+    if (typeof value !== "number") {
+      return "N/A";
+    }
+    const asPercent = value <= 1 ? value * 100 : value;
+    return `${asPercent.toFixed(2)}%`;
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "pass":
@@ -118,10 +136,99 @@ export function ResultsDashboard({ results, selectedResult, onSelectResult }: Re
                 </div>
               </div>
               <Progress value={indicator.value} className="h-1.5" />
+              {indicator.explanation && (
+                <p className="text-xs text-gray-500 pl-6">{indicator.explanation}</p>
+              )}
             </div>
           ))}
         </div>
       </Card>
+
+      {/* ELA Heatmap */}
+      {selectedResult.ela && (
+        <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
+          <div className="flex items-center gap-2 mb-4">
+            <Flame className="w-5 h-5 text-[#8d70b3]" />
+            <h3 className="text-gray-900">ELA Heatmap</h3>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Heatmap image */}
+            <div className="md:w-1/2">
+              {heatmapUrl ? (
+                <img
+                  src={heatmapUrl}
+                  alt="ELA heatmap"
+                  className="w-full rounded-lg border-2 border-[#8d70b3]/30 shadow-sm object-contain bg-gray-900"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    target.parentElement?.insertAdjacentHTML(
+                      "beforeend",
+                      '<div class="w-full h-48 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">Heatmap failed to load</div>'
+                    );
+                  }}
+                />
+              ) : (
+                <div className="w-full h-48 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+                  Heatmap not available
+                </div>
+              )}
+            </div>
+
+            {/* ELA details */}
+            <div className="md:w-1/2 space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">ELA Anomaly Score</span>
+                  <span className="text-gray-900 font-medium">{selectedResult.ela.score.toFixed(1)}%</span>
+                </div>
+                <Progress value={selectedResult.ela.score} className="h-2" />
+              </div>
+
+              <p className="text-sm text-gray-700 leading-relaxed">
+                {selectedResult.ela.explanation}
+              </p>
+
+              {/* Metrics */}
+              {selectedResult.ela.metrics && (
+                <div className="pt-3 border-t border-[#8d70b3]/30">
+                  <p className="text-sm text-gray-600 mb-2">Supporting Metrics</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Mean Intensity</span>
+                      <span className="text-gray-900">{formatPercentMetric(selectedResult.ela.metrics.mean_intensity)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Hotspot Ratio</span>
+                      <span className="text-gray-900">
+                        {formatRatioMetric(
+                          selectedResult.ela.metrics.edge_suppressed_hotspot_ratio ??
+                            selectedResult.ela.metrics.hotspot_ratio
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">95th Percentile</span>
+                      <span className="text-gray-900">{formatPercentMetric(selectedResult.ela.metrics.p95_intensity)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Block Variation</span>
+                      <span className="text-gray-900">{formatPercentMetric(selectedResult.ela.metrics.block_variation)}</span>
+                    </div>
+                    {selectedResult.ela.metrics.cross_quality_std != null && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Cross-Quality Std</span>
+                        <span className="text-gray-900">{selectedResult.ela.metrics.cross_quality_std?.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Summary */}
       <Card className="p-6 bg-gradient-to-br from-[#b690e6]/60 via-[#a280cc]/40 to-[#8d70b3]/60 border-[#8d70b3] shadow-md">

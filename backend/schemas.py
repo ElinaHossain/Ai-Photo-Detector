@@ -21,6 +21,18 @@ class Indicator(BaseModel):
     label: str
     value: float = Field(..., ge=0.0, le=100.0)
     status: IndicatorStatus
+    explanation: str | None = None
+
+
+class ELAHeatmap(BaseModel):
+    url: str
+
+
+class ELAMetadata(BaseModel):
+    score: float = Field(..., ge=0.0, le=100.0)
+    explanation: str
+    metrics: dict[str, Any]
+    heatmap: ELAHeatmap
 
 
 class DetectionMetadata(BaseModel):
@@ -31,6 +43,7 @@ class DetectionMetadata(BaseModel):
     modelName: str | None = None
     usedFallback: bool | None = None
     deterministicSeed: int | None = None
+    ela: ELAMetadata | None = None
 
 
 class DetectionResponse(BaseModel):

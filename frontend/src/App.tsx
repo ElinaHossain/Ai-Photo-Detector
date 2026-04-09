@@ -9,7 +9,7 @@ import { UploadZone } from "./components/UploadZone";
 import { ResultsDashboard } from "./components/ResultsDashboard";
 import { HowToGuide } from "./components/HowToGuide";
 import { exportToPDF } from "./utils/pdfExport";
-import { detectImage } from "./api/detector";
+import { detectImage, type ELAMetadata } from "./api/detector";
 
 export interface AnalysisResult {
   id: string;
@@ -22,8 +22,10 @@ export interface AnalysisResult {
     label: string;
     value: number;
     status: "pass" | "warning" | "fail";
+    explanation?: string;
   }[];
   imageUrl: string;
+  ela?: ELAMetadata;
 }
 
 export default function App() {
@@ -70,6 +72,7 @@ export default function App() {
           confidence: response.confidence,
           indicators: response.indicators,
           imageUrl: previewUrl,
+          ela: response.metadata?.ela,
         };
       });
 
