@@ -2,6 +2,27 @@ export interface DetectorIndicator {
   label: string;
   value: number;
   status: "pass" | "warning" | "fail";
+  explanation?: string;
+}
+
+export interface ELAHeatmap {
+  url: string;
+}
+
+export interface ELAMetadata {
+  score: number;
+  explanation: string;
+  metrics: {
+    mean_intensity?: number;
+    std_intensity?: number;
+    max_intensity?: number;
+    p95_intensity?: number;
+    hotspot_ratio?: number;
+    edge_suppressed_hotspot_ratio?: number;
+    block_variation?: number;
+    cross_quality_std?: number;
+  };
+  heatmap: ELAHeatmap;
 }
 
 export interface DetectImageResponse {
@@ -16,6 +37,7 @@ export interface DetectImageResponse {
     modelName?: string;
     usedFallback?: boolean;
     deterministicSeed?: number;
+    ela?: ELAMetadata;
   };
 }
 
@@ -24,7 +46,7 @@ interface DetectImageError {
   message?: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export async function detectImage(file: File): Promise<DetectImageResponse> {
   const body = new FormData();

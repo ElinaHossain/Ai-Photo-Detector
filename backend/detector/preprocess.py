@@ -2,6 +2,8 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from backend.detector.ela import analyze_ela
+
 
 # Basic magic-byte checks keep preprocessing dependency-free.
 SIGNATURES = {
@@ -34,7 +36,13 @@ def _entropy(sample: bytes) -> float:
     return entropy
 
 
-def preprocess_image(*, image_bytes: bytes, mime_type: str, deterministic: bool = False) -> PreprocessOutput:
+def preprocess_image(
+    *,
+    image_bytes: bytes,
+    mime_type: str,
+    request_id: str | None = None,
+    deterministic: bool = False,
+) -> PreprocessOutput:
     if not image_bytes:
         raise ValueError("Uploaded image is empty.")
 
@@ -64,5 +72,18 @@ def preprocess_image(*, image_bytes: bytes, mime_type: str, deterministic: bool 
         "byte_length": byte_length,
         "deterministic": deterministic,
     }
+
+    if request_id:
+        ela_analysis = analyze_ela(image_bytes=image_bytes, request_id=request_id)
+        model_input["ela_anomaly_score"] = ela_analysis.score
+        metadata["ela"] = {
+            "score": ela_analysis.score,
+            "explanation": ela_analysis.explanation,
+            "metrics": ela_analysis.metrics,
+            "heatmap": {
+                "url": ela_analysis.heatmap.data_url,
+                "mediaType": ela_analysis.heatmap.media_type,
+            },
+        }
 
     return PreprocessOutput(model_input=model_input, metadata=metadata)

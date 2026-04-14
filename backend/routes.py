@@ -12,6 +12,8 @@ from backend.detector.predict import ModelUnavailableError, predict_scores
 from backend.detector.preprocess import preprocess_image
 from backend.schemas import (
     ACCEPTED_IMAGE_MIME_TYPES,
+    ELAHeatmap,
+    ELAMetadata,
     MAX_UPLOAD_SIZE_BYTES,
     DetectionMetadata,
     DetectionResponse,
@@ -132,6 +134,7 @@ async def detect_image(file: UploadFile | None = File(default=None)):
         preprocess_result = preprocess_image(
             image_bytes=image_bytes,
             mime_type=mime_type,
+            request_id=request_id,
             deterministic=deterministic_seed is not None,
         )
         prediction = predict_scores(
@@ -142,8 +145,6 @@ async def detect_image(file: UploadFile | None = File(default=None)):
                 "mime_type": mime_type,
             },
             deterministic_seed=deterministic_seed,
-            # Default to no fallback so frontend uses provider-backed results
-            # instead of silently returning heuristic output.
             allow_fallback=os.getenv("DETECTOR_DISABLE_FALLBACK", "1") != "1",
         )
         threshold = _classification_threshold(used_fallback=prediction.used_fallback)
@@ -154,6 +155,18 @@ async def detect_image(file: UploadFile | None = File(default=None)):
             if prediction.model_name == "bitmind_api" and provider_is_ai is not None
             else postprocessed.isAIGenerated
         )
+
+        ela_metadata = None
+        ela_payload = preprocess_result.metadata.get("ela", {})
+        heatmap_payload = ela_payload.get("heatmap", {})
+        if heatmap_payload:
+            heatmap_url = str(heatmap_payload.get("url", ""))
+            ela_metadata = ELAMetadata(
+                score=round(float(ela_payload.get("score", 0.0)), 2),
+                explanation=str(ela_payload.get("explanation", "")),
+                metrics=dict(ela_payload.get("metrics", {})),
+                heatmap=ELAHeatmap(url=heatmap_url),
+            )
 
         response = DetectionResponse(
             isAIGenerated=final_is_ai,
@@ -167,6 +180,7 @@ async def detect_image(file: UploadFile | None = File(default=None)):
                 modelName=prediction.model_name,
                 usedFallback=prediction.used_fallback,
                 deterministicSeed=deterministic_seed,
+                ela=ela_metadata,
             ),
         )
 

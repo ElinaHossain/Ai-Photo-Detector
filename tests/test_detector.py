@@ -1,6 +1,8 @@
+import io
 import math
 
 import pytest
+from PIL import Image
 
 from backend.detector.postprocess import _status_for_value, postprocess_prediction
 from backend.detector.predict import ModelUnavailableError, PredictionOutput, predict_scores
@@ -43,6 +45,23 @@ class TestPreprocessImage:
 
         assert result.metadata["mime_type"] == "image/webp"
         assert result.metadata["deterministic"] is True
+
+    def test_includes_inline_ela_heatmap_when_request_id_is_present(self):
+        image = Image.new("RGB", (12, 12), color=(180, 190, 200))
+        buffer = io.BytesIO()
+        image.save(buffer, format="PNG")
+
+        result = preprocess_image(
+            image_bytes=buffer.getvalue(),
+            mime_type="image/png",
+            request_id="req-123",
+        )
+
+        assert "ela" in result.metadata
+        heatmap = result.metadata["ela"]["heatmap"]
+        assert heatmap["mediaType"] == "image/png"
+        assert heatmap["url"].startswith("data:image/png;base64,")
+        assert "artifact" not in result.metadata["ela"]
 
 
 class TestPredictScores:

@@ -48,6 +48,59 @@ def test_detect_success(client, sample_png_bytes, monkeypatch):
     assert payload["metadata"]["modelName"] == "configured_model"
     assert payload["metadata"]["usedFallback"] is False
     assert isinstance(payload["metadata"]["requestId"], str)
+    assert "artifacts" not in payload["metadata"]
+
+
+def test_detect_success_returns_inline_ela_heatmap(client, sample_png_bytes, monkeypatch):
+    monkeypatch.setattr(
+        "backend.routes.preprocess_image",
+        lambda **kwargs: PreprocessOutput(
+            model_input={"entropy": 1.0, "zero_ratio": 0.5, "size_log": 1.0, "size_norm": 0.1},
+            metadata={
+                "mime_type": "image/png",
+                "byte_length": len(sample_png_bytes),
+                "deterministic": False,
+                "ela": {
+                    "score": 3.2,
+                    "explanation": "Low-intensity ELA response.",
+                    "metrics": {"mean_intensity": 0.37},
+                    "heatmap": {
+                        "url": "data:image/png;base64,abc123",
+                        "mediaType": "image/png",
+                    },
+                },
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.predict_scores",
+        lambda **kwargs: PredictionOutput(
+            ai_probability=84.62,
+            raw_scores={"ai_probability": 84.62},
+            model_name="configured_model",
+            used_fallback=False,
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.postprocess_prediction",
+        lambda **kwargs: PostprocessOutput(
+            isAIGenerated=True,
+            confidence=84.62,
+            indicators=[
+                {"label": "Pixel Consistency", "value": 88.39, "status": "pass"},
+            ],
+        ),
+    )
+
+    response = client.post(
+        "/api/detect",
+        files={"file": ("sample.png", sample_png_bytes, "image/png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["metadata"]["ela"]["heatmap"]["url"].startswith("data:image/png;base64,")
+    assert "artifacts" not in payload["metadata"]
 
 
 def test_detect_missing_file_returns_400(client):
