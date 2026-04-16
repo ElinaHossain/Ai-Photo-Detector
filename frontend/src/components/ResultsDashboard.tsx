@@ -42,19 +42,32 @@ export function ResultsDashboard({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ width: "100%" }}>
       {/* TOP IMAGE + INFO */}
-      <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
-        <div className="flex flex-col md:flex-row gap-6">
+      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
+        <div
+          className="flex flex-col md:flex-row gap-6"
+          style={{ alignItems: "stretch" }}
+        >
           <div className="md:w-1/2">
             <img
               src={selectedResult.imageUrl}
               alt={selectedResult.fileName}
-              className="w-full h-64 object-cover rounded-lg border"
+              className="w-full object-cover rounded-lg border"
+              style={{
+                height: "clamp(18rem, 28vw, 34rem)",
+              }}
             />
           </div>
 
-          <div className="md:w-1/2 space-y-4">
+          <div
+            className="md:w-1/2 space-y-4"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <div>
               <h3>{selectedResult.fileName}</h3>
               <div className="flex items-center gap-2 text-sm text-gray-500">
@@ -94,7 +107,7 @@ export function ResultsDashboard({
       </Card>
 
       {/* FORENSIC TESTS (NEW SYSTEM) */}
-      <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
+      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
         <h3 className="mb-4 font-semibold text-gray-900">
           Forensic Test Results
         </h3>
@@ -121,19 +134,26 @@ export function ResultsDashboard({
 
       {/* ELA */}
       {selectedResult.ela && (
-        <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
+        <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5" />
             <h3>ELA Heatmap</h3>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-6">
+          <div
+            className="flex flex-col md:flex-row gap-6"
+            style={{ alignItems: "stretch" }}
+          >
             <div className="md:w-1/2">
               {heatmapUrl ? (
                 <img
                   src={heatmapUrl}
                   alt="ELA heatmap"
                   className="w-full rounded-lg border object-contain bg-black"
+                  style={{
+                    maxHeight: "none",
+                    height: "clamp(22rem, 38vw, 44rem)",
+                  }}
                 />
               ) : (
                 <div className="h-48 flex items-center justify-center text-gray-400">
@@ -142,7 +162,14 @@ export function ResultsDashboard({
               )}
             </div>
 
-            <div className="md:w-1/2 space-y-4">
+            <div
+              className="md:w-1/2 space-y-4"
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <div>
                 <div className="flex justify-between text-sm">
                   <span>ELA Score</span>
@@ -179,7 +206,7 @@ export function ResultsDashboard({
       )}
 
       {/* SUMMARY */}
-      <Card className="p-6 bg-purple-100">
+      <Card className="p-6 bg-purple-100 shadow-md border-[#8d70b3]/30">
         <h3>Analysis Summary</h3>
         <p>
           This image has been analyzed using multiple detection

@@ -156,13 +156,20 @@ export default function App() {
     }
   };
 
+  const isResultsView = currentTab === "results";
+
   /* =======================
      UI
   ======================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#b690e6] via-[#a280cc] to-[#8d70b3]">
       <header className="bg-white/80 backdrop-blur-md border-b border-[#8d70b3]/30 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between">
+        <div
+          className="mx-auto px-4 py-4 flex justify-between"
+          style={{
+            maxWidth: isResultsView ? "none" : "80rem",
+          }}
+        >
           <div className="flex gap-3 items-center">
             <div className="w-10 h-10 bg-gradient-to-br from-[#8d70b3] to-[#655080] rounded-lg flex items-center justify-center shadow-md">
               <FileText className="w-6 h-6 text-white" />
@@ -181,7 +188,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main
+        className="mx-auto px-4 py-8"
+        style={{
+          maxWidth: isResultsView ? "none" : "80rem",
+          width: "100%",
+        }}
+      >
         <Tabs
           value={currentTab}
           onValueChange={(v) =>
@@ -228,9 +241,15 @@ export default function App() {
           <TabsContent value="results">
             {currentResult ? (
               <>
-                <Button onClick={handleExportPDF}>
-                  Export PDF
-                </Button>
+                <div
+                  className="flex justify-between items-center"
+                  style={{ margin: "1rem 0" }}
+                >
+                  <h2 className="text-white">Analysis Results</h2>
+                  <Button onClick={handleExportPDF}>
+                    Export PDF
+                  </Button>
+                </div>
 
                 <ResultsDashboard
                   results={[currentResult]}
