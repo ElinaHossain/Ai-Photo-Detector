@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { FileCheck, Image as ImageIcon, Upload, X } from "lucide-react";
+import { Upload, Image as ImageIcon, X } from "lucide-react";
 import { Button } from "./ui/button";
 
 interface UploadZoneProps {
@@ -11,37 +11,38 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
-  const handleDragOver = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
     setIsDragging(true);
   }, []);
 
-  const handleDragLeave = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((event: React.DragEvent) => {
-    event.preventDefault();
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
     setIsDragging(false);
-
-    const files = Array.from(event.dataTransfer.files).filter((file) =>
+    
+    const files = Array.from(e.dataTransfer.files).filter(file =>
       file.type.startsWith("image/")
     );
-
+    
     if (files.length > 0) {
       setSelectedFiles(files);
     }
   }, []);
 
-  const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      setSelectedFiles(Array.from(event.target.files));
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      setSelectedFiles(files);
     }
   };
 
   const removeFile = (index: number) => {
-    setSelectedFiles((files) => files.filter((_, fileIndex) => fileIndex !== index));
+    setSelectedFiles(files => files.filter((_, i) => i !== index));
   };
 
   const handleAnalyze = () => {
@@ -52,37 +53,16 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <p
-          style={{
-            color: "#111827",
-            fontSize: "1.5rem",
-            fontWeight: 700,
-            lineHeight: 1.2,
-            marginBottom: "0.5rem",
-          }}
-        >
-          Upload an image
-        </p>
-        <p style={{ color: "#64748b" }}>
-          Run AI detection, JPEG artifact analysis, and ELA evidence mapping.
-        </p>
-      </div>
-
+    <div className="space-y-4">
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        style={{
-          border: `1.5px dashed ${isDragging ? "#2563eb" : "#cbd5e1"}`,
-          borderRadius: "8px",
-          backgroundColor: isDragging ? "#eff6ff" : "#f8fafc",
-          padding: "2.5rem",
-          textAlign: "center",
-          transition: "border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease",
-          boxShadow: isDragging ? "0 16px 40px rgba(37, 99, 235, 0.12)" : "none",
-        }}
+        className={`border-2 border-dashed rounded-lg p-12 text-center transition-all duration-200 ${
+          isDragging
+            ? "border-[#8d70b3] bg-[#b690e6]/50 scale-[1.02]"
+            : "border-[#8d70b3]/50 bg-gradient-to-br from-[#f5f0ff]/50 to-[#b690e6]/50 hover:border-[#8d70b3] hover:shadow-md"
+        }`}
       >
         <input
           type="file"
@@ -93,64 +73,44 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
           onChange={handleFileInput}
           disabled={isAnalyzing}
         />
-
+        
         <div className="flex flex-col items-center gap-4">
-          <div
-            className="flex items-center justify-center"
-            style={{
-              width: "4rem",
-              height: "4rem",
-              borderRadius: "8px",
-              backgroundColor: "#111827",
-              color: "#ffffff",
-              boxShadow: "0 14px 30px rgba(17, 24, 39, 0.18)",
-            }}
-          >
-            <Upload className="w-8 h-8" />
+          <div className="w-16 h-16 bg-gradient-to-br from-[#8d70b3] to-[#655080] rounded-full flex items-center justify-center shadow-md">
+            <Upload className="w-8 h-8 text-white" />
           </div>
-
+          
           <div>
-            <p style={{ color: "#111827", fontWeight: 700, marginBottom: "0.25rem" }}>
-              Drop image files here
+            <p className="text-gray-900 mb-1">
+              Drag and drop images here
             </p>
-            <p className="text-sm" style={{ color: "#64748b" }}>
-              JPG, PNG, and WEBP files up to 10 MB.
+            <p className="text-sm text-[#655080]">
+              or click to browse your files
             </p>
           </div>
-
-          <label
-            htmlFor="file-upload"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "2.5rem",
-              padding: "0 1rem",
-              borderRadius: "8px",
-              backgroundColor: "#ffffff",
-              border: "1px solid #d8dee8",
-              color: "#111827",
-              fontWeight: 600,
-              cursor: isAnalyzing ? "not-allowed" : "pointer",
-              boxShadow: "0 8px 20px rgba(15, 23, 42, 0.06)",
-            }}
-          >
-            Browse files
+          
+          <label htmlFor="file-upload">
+            <Button type="button" variant="outline" disabled={isAnalyzing} asChild>
+              <span>Browse Files</span>
+            </Button>
           </label>
+          
+          <p className="text-xs text-gray-500">
+            Supports: JPG, PNG, WEBP (Max 10MB per file)
+          </p>
         </div>
       </div>
 
       {selectedFiles.length > 0 && (
-        <div style={{ marginTop: "1.25rem" }}>
-          <div className="flex items-center justify-between" style={{ marginBottom: "0.75rem" }}>
-            <p className="text-sm" style={{ color: "#475569" }}>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-700">
               {selectedFiles.length} {selectedFiles.length === 1 ? "file" : "files"} selected
             </p>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setSelectedFiles([])}
-              style={{ color: "#475569" }}
+              className="text-[#655080] hover:text-[#514066] hover:bg-[#b690e6]/30"
             >
               Clear all
             </Button>
@@ -159,30 +119,15 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
           <div className="space-y-2 max-h-48 overflow-y-auto">
             {selectedFiles.map((file, index) => (
               <div
-                key={`${file.name}-${index}`}
-                className="flex items-center gap-3"
-                style={{
-                  padding: "0.75rem",
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                }}
+                key={index}
+                className="flex items-center gap-3 p-3 bg-white border border-[#8d70b3]/30 rounded-lg shadow-sm hover:shadow-md transition-shadow"
               >
-                <div
-                  className="flex items-center justify-center flex-shrink-0"
-                  style={{
-                    width: "2.5rem",
-                    height: "2.5rem",
-                    borderRadius: "8px",
-                    backgroundColor: "#ecfdf5",
-                    color: "#047857",
-                  }}
-                >
-                  <ImageIcon className="w-5 h-5" />
+                <div className="w-10 h-10 bg-gradient-to-br from-[#b690e6] to-[#8d70b3] rounded flex items-center justify-center flex-shrink-0">
+                  <ImageIcon className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900 truncate">{file.name}</p>
-                  <p className="text-xs" style={{ color: "#64748b" }}>
+                  <p className="text-xs text-[#655080]">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -191,6 +136,7 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
                   size="sm"
                   onClick={() => removeFile(index)}
                   disabled={isAnalyzing}
+                  className="hover:bg-[#b690e6]/30"
                 >
                   <X className="w-4 h-4 text-gray-400" />
                 </Button>
@@ -201,17 +147,10 @@ export function UploadZone({ onUpload, isAnalyzing }: UploadZoneProps) {
           <Button
             onClick={handleAnalyze}
             disabled={isAnalyzing}
-            className="w-full"
+            className="w-full bg-gradient-to-r from-[#8d70b3] to-[#655080] hover:from-[#796099] hover:to-[#514066] shadow-md"
             size="lg"
-            style={{
-              marginTop: "1rem",
-              backgroundColor: "#111827",
-              color: "#ffffff",
-              borderRadius: "8px",
-            }}
           >
-            <FileCheck className="w-4 h-4" />
-            {isAnalyzing ? "Analyzing..." : "Analyze image"}
+            {isAnalyzing ? "Analyzing..." : "Analyze Images"}
           </Button>
         </div>
       )}
