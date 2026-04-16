@@ -2,7 +2,15 @@ import { AnalysisResult } from "../App";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { CheckCircle, AlertTriangle, XCircle, Calendar, Flame } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Calendar,
+  Flame,
+} from "lucide-react";
+import ForensicTestCard from "./ForensicTestCard";
+import { normalizeForensicTests } from "../utils/forensicNormalizer";
 
 interface ResultsDashboardProps {
   results: AnalysisResult[];
@@ -13,174 +21,110 @@ interface ResultsDashboardProps {
 export function ResultsDashboard({
   results,
   selectedResult,
-  onSelectResult,
 }: ResultsDashboardProps) {
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? "";
-  const rawHeatmapUrl = selectedResult.ela?.heatmap?.url;
-  const heatmapUrl = rawHeatmapUrl
-    ? rawHeatmapUrl.startsWith("data:")
-      ? rawHeatmapUrl
-      : apiBaseUrl
-        ? new URL(rawHeatmapUrl, apiBaseUrl).toString()
-        : rawHeatmapUrl
-    : null;
+  const apiBaseUrl =
+    (
+      import.meta as ImportMeta & {
+        env?: { VITE_API_BASE_URL?: string };
+      }
+    ).env?.VITE_API_BASE_URL?.trim() ?? "";
+  const rawHeatmapUrl = selectedResult?.ela?.heatmap?.url;
 
-  const formatPercentMetric = (value?: number) => (typeof value === "number" ? `${value.toFixed(2)}%` : "N/A");
+  const heatmapUrl =
+    rawHeatmapUrl?.startsWith("data:")
+      ? rawHeatmapUrl
+      : apiBaseUrl && rawHeatmapUrl
+        ? new URL(rawHeatmapUrl, apiBaseUrl).toString()
+        : null;
+
+  const forensicTests = normalizeForensicTests(selectedResult);
+
+  const formatPercentMetric = (value?: number) =>
+    typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
+
   const formatRatioMetric = (value?: number) => {
-    if (typeof value !== "number") {
-      return "N/A";
-    }
+    if (typeof value !== "number") return "N/A";
     const asPercent = value <= 1 ? value * 100 : value;
     return `${asPercent.toFixed(2)}%`;
-  };
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "pass":
-        return <CheckCircle className="w-4 h-4 text-emerald-500" />;
-      case "warning":
-        return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-      case "fail":
-        return <XCircle className="w-4 h-4 text-rose-400" />;
-      default:
-        return null;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pass":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200";
-      case "warning":
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      case "fail":
-        return "bg-rose-100 text-rose-700 border-rose-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
-    }
-  };
-
-  const indicatorDescriptions: Record<string, string> = {
-    "Pixel Consistency":
-      "Checks if pixels look too smooth or artificially generated.",
-    "Noise Patterns":
-      "Detects unnatural noise patterns compared to real camera images.",
-    "Edge Detection":
-      "Looks for unnatural sharp or blurred edges typical of AI images.",
-    "Color Distribution":
-      "Analyzes unusual color patterns often seen in AI-generated images.",
-    "Frequency Analysis":
-      "Examines frequency signals that can reveal synthetic image creation.",
   };
 
   return (
     <div className="space-y-6">
-      <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
+      {/* TOP IMAGE + INFO */}
+      <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
         <div className="flex flex-col md:flex-row gap-6">
           <div className="md:w-1/2">
             <img
               src={selectedResult.imageUrl}
               alt={selectedResult.fileName}
-              className="w-full h-64 object-cover rounded-lg border-2 border-[#8d70b3]/30 shadow-sm"
+              className="w-full h-64 object-cover rounded-lg border"
             />
           </div>
 
           <div className="md:w-1/2 space-y-4">
             <div>
-              <h3 className="text-gray-900 mb-1">{selectedResult.fileName}</h3>
+              <h3>{selectedResult.fileName}</h3>
               <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Calendar className="w-4 h-4 text-[#655080]" />
+                <Calendar className="w-4 h-4" />
                 {selectedResult.uploadDate.toLocaleString()}
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Detection Result</span>
+            <div>
+              <div className="flex justify-between text-sm">
+                <span>Detection Result</span>
                 <Badge
-                  variant={selectedResult.isAIGenerated ? "destructive" : "default"}
-                  className="text-sm"
+                  variant={
+                    selectedResult.isAIGenerated
+                      ? "destructive"
+                      : "default"
+                  }
                 >
-                  {selectedResult.isAIGenerated ? "AI Generated" : "Real Photo"}
+                  {selectedResult.isAIGenerated
+                    ? "AI Generated"
+                    : "Real Photo"}
                 </Badge>
               </div>
 
-              <div>
-                <div className="flex items-center justify-between text-sm mb-1">
-                  <span className="text-gray-600">Confidence Score</span>
-                  <span className="text-gray-900">
+              <div className="mt-2">
+                <div className="flex justify-between text-sm">
+                  <span>Confidence</span>
+                  <span>
                     {selectedResult.confidence.toFixed(1)}%
                   </span>
                 </div>
-                <Progress value={selectedResult.confidence} className="h-2" />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-[#8d70b3]/30">
-              <p className="text-sm text-gray-600 mb-2">File Information</p>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Size:</span>
-                  <span className="text-gray-900">
-                    {(selectedResult.fileSize / 1024 / 1024).toFixed(2)} MB
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Format:</span>
-                  <span className="text-gray-900">
-                    {selectedResult.fileName.split(".").pop()?.toUpperCase()}
-                  </span>
-                </div>
+                <Progress value={selectedResult.confidence} />
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
-        <h3 className="text-gray-900 mb-4">Detection Indicators</h3>
-        <div className="space-y-4">
-          {selectedResult.indicators.map((indicator, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-start gap-2">
-                  {getStatusIcon(indicator.status)}
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-900">
-                      {indicator.label}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {indicatorDescriptions[indicator.label] || ""}
-                    </span>
-                  </div>
-                </div>
+      {/* FORENSIC TESTS (NEW SYSTEM) */}
+      <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
+        <h3 className="mb-4 font-semibold text-gray-900">
+          Forensic Test Results
+        </h3>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">
-                    {indicator.value.toFixed(1)}%
-                  </span>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs border ${getStatusColor(indicator.status)}`}
-                  >
-                    {indicator.status}
-                  </Badge>
-                </div>
+        {forensicTests.length === 0 ? (
+          <p>No forensic test results available.</p>
+        ) : (
+          <div className="space-y-4">
+            {forensicTests.map((test, index) => (
+              <div key={`${selectedResult.id}-${test.test_name}-${index}`}>
+                <ForensicTestCard test={test} />
               </div>
-
-              <Progress value={indicator.value} className="h-1.5" />
-              {indicator.explanation && (
-                <p className="text-xs text-gray-500 pl-6">{indicator.explanation}</p>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
+      {/* ELA */}
       {selectedResult.ela && (
-        <Card className="p-6 shadow-md bg-white/70 backdrop-blur-sm border-[#8d70b3]/30">
+        <Card className="p-6 shadow-md bg-white/70 border-[#8d70b3]/30">
           <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5 text-[#8d70b3]" />
-            <h3 className="text-gray-900">ELA Heatmap</h3>
+            <Flame className="w-5 h-5" />
+            <h3>ELA Heatmap</h3>
           </div>
 
           <div className="flex flex-col md:flex-row gap-6">
@@ -189,76 +133,42 @@ export function ResultsDashboard({
                 <img
                   src={heatmapUrl}
                   alt="ELA heatmap"
-                  className="w-full rounded-lg border-2 border-[#8d70b3]/30 shadow-sm object-contain bg-gray-900"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = "none";
-                    target.parentElement?.insertAdjacentHTML(
-                      "beforeend",
-                      '<div class="w-full h-48 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">Heatmap failed to load</div>'
-                    );
-                  }}
+                  className="w-full rounded-lg border object-contain bg-black"
                 />
               ) : (
-                <div className="w-full h-48 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 text-sm">
+                <div className="h-48 flex items-center justify-center text-gray-400">
                   Heatmap not available
                 </div>
               )}
             </div>
 
             <div className="md:w-1/2 space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">ELA Anomaly Score</span>
-                  <span className="text-gray-900 font-medium">
+              <div>
+                <div className="flex justify-between text-sm">
+                  <span>ELA Score</span>
+                  <span>
                     {selectedResult.ela.score.toFixed(1)}%
                   </span>
                 </div>
-                <Progress value={selectedResult.ela.score} className="h-2" />
+                <gress value={selectedResult.ela.score} />
               </div>
 
-              <p className="text-sm text-gray-700 leading-relaxed">
+              <p className="text-sm">
                 {selectedResult.ela.explanation}
               </p>
 
               {selectedResult.ela.metrics && (
-                <div className="pt-3 border-t border-[#8d70b3]/30">
-                  <p className="text-sm text-gray-600 mb-2">Supporting Metrics</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Mean Intensity</span>
-                      <span className="text-gray-900">
-                        {formatPercentMetric(selectedResult.ela.metrics.mean_intensity)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Hotspot Ratio</span>
-                      <span className="text-gray-900">
-                        {formatRatioMetric(
-                          selectedResult.ela.metrics.edge_suppressed_hotspot_ratio ??
-                            selectedResult.ela.metrics.hotspot_ratio
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">95th Percentile</span>
-                      <span className="text-gray-900">
-                        {formatPercentMetric(selectedResult.ela.metrics.p95_intensity)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Block Variation</span>
-                      <span className="text-gray-900">
-                        {formatPercentMetric(selectedResult.ela.metrics.block_variation)}
-                      </span>
-                    </div>
-                    {selectedResult.ela.metrics.cross_quality_std != null && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Cross-Quality Std</span>
-                        <span className="text-gray-900">
-                          {selectedResult.ela.metrics.cross_quality_std?.toFixed(2)}
-                        </span>
-                      </div>
+                <div className="text-sm space-y-1">
+                  <div>
+                    Mean Intensity:{" "}
+                    {formatPercentMetric(
+                      selectedResult.ela.metrics.mean_intensity
+                    )}
+                  </div>
+                  <div>
+                    Hotspot Ratio:{" "}
+                    {formatRatioMetric(
+                      selectedResult.ela.metrics.hotspot_ratio
                     )}
                   </div>
                 </div>
@@ -267,22 +177,17 @@ export function ResultsDashboard({
           </div>
         </Card>
       )}
-      <Card className="p-6 bg-gradient-to-br from-[#b690e6]/60 via-[#a280cc]/40 to-[#8d70b3]/60 border-[#8d70b3] shadow-md">
-        <h3 className="text-gray-900 mb-2">Analysis Summary</h3>
-        <p className="text-gray-700 text-sm leading-relaxed">
-          Based on our advanced AI detection algorithms, this image has been analyzed
-          across multiple indicators including pixel consistency, noise patterns, edge
-          detection, and color distribution. The overall confidence score of{" "}
-          <span className="font-medium">
-            {selectedResult.confidence.toFixed(1)}%
-          </span>{" "}
-          indicates that this image is{" "}
-          <span className="font-medium">
-            {selectedResult.isAIGenerated
-              ? "likely AI-generated"
-              : "likely a real photograph"}
-          </span>
-          .
+
+      {/* SUMMARY */}
+      <Card className="p-6 bg-purple-100">
+        <h3>Analysis Summary</h3>
+        <p>
+          This image has been analyzed using multiple detection
+          indicators. The overall confidence score of{" "}
+          {selectedResult.confidence.toFixed(1)}% suggests that it is{" "}
+          {selectedResult.isAIGenerated
+            ? "likely AI-generated"
+            : "likely real"}.
         </p>
       </Card>
     </div>
