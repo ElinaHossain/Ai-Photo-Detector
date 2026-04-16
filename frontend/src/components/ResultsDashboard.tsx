@@ -14,14 +14,14 @@ interface ResultsDashboardProps {
 }
 
 const panelStyle = {
-  borderRadius: "8px",
+  borderRadius: "16px",
   border: "1px solid rgba(141, 112, 179, 0.3)",
   background: "rgba(255, 255, 255, 0.78)",
-  boxShadow: "0 14px 34px rgba(61, 48, 77, 0.16)",
+  boxShadow: "0 18px 42px rgba(61, 48, 77, 0.14)",
 };
 
 const mutedPanelStyle = {
-  borderRadius: "8px",
+  borderRadius: "14px",
   border: "1px solid rgba(141, 112, 179, 0.24)",
   background: "rgba(245, 240, 255, 0.58)",
 };
@@ -53,7 +53,7 @@ function MediaFrame({
       style={{
         width: `min(100%, ${maxWidth})`,
         aspectRatio: "4 / 3",
-        borderRadius: "8px",
+        borderRadius: "14px",
         backgroundColor: "transparent",
         borderColor: "rgba(141, 112, 179, 0.18)",
         display: "flex",
@@ -120,15 +120,16 @@ export function ResultsDashboard({
   return (
     <div
       style={{
-        width: "100%",
+        width: "min(100%, 1320px)",
+        margin: "0 auto",
         display: "grid",
-        gap: "1rem",
+        gap: "1.25rem",
       }}
     >
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
           gap: "1rem",
         }}
       >
@@ -184,8 +185,8 @@ export function ResultsDashboard({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-          gap: "1rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+          gap: "1.25rem",
           alignItems: "stretch",
         }}
       >
@@ -208,7 +209,7 @@ export function ResultsDashboard({
           </div>
 
           <div className="flex justify-center">
-            <MediaFrame>
+            <MediaFrame maxWidth="500px">
               <img
                 src={selectedResult.imageUrl}
                 alt={selectedResult.fileName}
@@ -290,8 +291,8 @@ export function ResultsDashboard({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "0.75rem",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: "1rem",
             }}
           >
             {forensicTests.map((test, index) => (
@@ -319,14 +320,14 @@ export function ResultsDashboard({
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-              gap: "1rem",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
+              gap: "1.25rem",
               alignItems: "center",
             }}
           >
             <div className="flex justify-center">
               {heatmapUrl ? (
-                <MediaFrame>
+                <MediaFrame maxWidth="500px">
                   <img
                     src={heatmapUrl}
                     alt="ELA heatmap"

@@ -117,7 +117,7 @@ export default function ForensicTestCard({ test }: Props) {
         display: "flex",
         flexDirection: "column",
         gap: "0.625rem",
-        borderRadius: "8px",
+        borderRadius: "16px",
         boxShadow: "0 8px 22px rgba(61, 48, 77, 0.1)",
         overflow: "hidden",
       }}
