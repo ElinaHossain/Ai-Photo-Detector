@@ -102,11 +102,18 @@ export function ResultsDashboard({
         {forensicTests.length === 0 ? (
           <p>No forensic test results available.</p>
         ) : (
-          <div className="space-y-4">
+          <div
+            className="grid gap-4"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridAutoRows: "1fr",
+            }}
+          >
             {forensicTests.map((test, index) => (
-              <div key={`${selectedResult.id}-${test.test_name}-${index}`}>
-                <ForensicTestCard test={test} />
-              </div>
+              <ForensicTestCard
+                key={`${selectedResult.id}-${test.test_name}-${index}`}
+                test={test}
+              />
             ))}
           </div>
         )}

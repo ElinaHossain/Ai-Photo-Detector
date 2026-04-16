@@ -4,18 +4,12 @@ import type { ForensicTest } from "../api/detector";
 export function normalizeForensicTests(
   result: AnalysisResult
 ): ForensicTest[] {
-  // If backend already returns standardized forensic tests, use them
-  if (
-    result.forensic_tests &&
-    Array.isArray(result.forensic_tests) &&
-    result.forensic_tests.length > 0
-  ) {
-    return result.forensic_tests;
-  }
+  const standardizedTests = Array.isArray(result.forensic_tests)
+    ? result.forensic_tests
+    : [];
 
-  // Otherwise convert legacy indicators into the new forensic format
-  if (result.indicators && Array.isArray(result.indicators)) {
-    return result.indicators.map((indicator) => ({
+  const indicatorTests = Array.isArray(result.indicators)
+    ? result.indicators.map((indicator) => ({
       test_name: indicator.label,
       score:
         typeof indicator.value === "number"
@@ -34,8 +28,21 @@ export function normalizeForensicTests(
       details: {
         explanation: indicator.explanation ?? "",
       },
-    }));
+    }))
+    : [];
+
+  if (standardizedTests.length === 0) {
+    return indicatorTests;
   }
 
-  return [];
+  const existingNames = new Set(
+    standardizedTests.map((test) => test.test_name.toLowerCase())
+  );
+
+  return [
+    ...standardizedTests,
+    ...indicatorTests.filter(
+      (test) => !existingNames.has(test.test_name.toLowerCase())
+    ),
+  ];
 }

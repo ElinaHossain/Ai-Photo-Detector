@@ -96,11 +96,29 @@ export default function ForensicTestCard({ test }: Props) {
     : [];
 
   return (
-    <Card className="p-4 bg-white/80 border border-[#8d70b3]/20 shadow-sm">
+    <Card
+      className="p-4 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
+      style={{
+        minHeight: "360px",
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       <div className="flex items-center justify-between gap-3 mb-3">
         <div className="flex items-center gap-2">
           {getIcon(test.verdict)}
-          <span className="font-medium text-gray-900">{test.test_name}</span>
+          <span
+            className="font-medium text-gray-900"
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
+          >
+            {test.test_name}
+          </span>
         </div>
 
         <Badge
@@ -124,7 +142,11 @@ export default function ForensicTestCard({ test }: Props) {
           <img
             src={artifactMap.url}
             alt={`${test.test_name} artifact map`}
-            className="max-h-96 w-full rounded border object-contain bg-black"
+            className="w-full rounded border bg-black"
+            style={{
+              height: "150px",
+              objectFit: "contain",
+            }}
           />
         </div>
       )}
@@ -134,7 +156,15 @@ export default function ForensicTestCard({ test }: Props) {
           {detailsEntries.map(([key, value]) => (
             <div key={key} className="text-sm">
               {key === "explanation" && value ? (
-                <p className="text-sm text-gray-600 leading-relaxed mt-1">
+                <p
+                  className="text-sm text-gray-600 leading-relaxed mt-1"
+                  style={{
+                    display: "-webkit-box",
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                  }}
+                >
                   {formatDetailValue(value)}
                 </p>
               ) : (
@@ -159,7 +189,7 @@ export default function ForensicTestCard({ test }: Props) {
             </div>
           )}
 
-          {metricEntries.slice(0, 6).map(([key, value]) => (
+          {metricEntries.slice(0, 4).map(([key, value]) => (
             <div key={key} className="flex justify-between gap-3 text-sm">
               <span className="text-gray-500">{formatDetailKey(key)}</span>
               <span className="text-gray-900 text-right">
