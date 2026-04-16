@@ -124,7 +124,7 @@ export default function ForensicTestCard({ test }: Props) {
           <img
             src={artifactMap.url}
             alt={`${test.test_name} artifact map`}
-            className="w-full rounded border object-contain bg-black"
+            className="max-h-96 w-full rounded border object-contain bg-black"
           />
         </div>
       )}

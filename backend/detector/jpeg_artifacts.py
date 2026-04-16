@@ -232,7 +232,16 @@ def _build_artifact_map(original: Image.Image, block_map: np.ndarray, analysis_s
     return ArtifactMap(data_url=f"data:{media_type};base64,{encoded}", media_type=media_type)
 
 
-def _explanation(score: float, region_variation: float, suspicious_ratio: float) -> str:
+def _explanation(score: float, region_variation: float, suspicious_ratio: float, *, source_is_jpeg: bool) -> str:
+    if not source_is_jpeg:
+        if score >= 0.25:
+            return (
+                "The source file is not JPEG, so this result is lower-confidence. "
+                "Highlighted areas show JPEG-like block or DCT texture inconsistencies, "
+                "but they should be treated as inconclusive evidence."
+            )
+        return "The source file is not JPEG, so JPEG compression artifact evidence is limited."
+
     if score >= 0.5:
         return (
             "JPEG artifact analysis found localized 8x8 block and DCT energy inconsistencies, "
@@ -279,7 +288,7 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
     boundary_component = _clamp(boundary_grid_strength / 1.1, 0.0, 1.0)
     hotspot_component = _clamp(suspicious_ratio / 0.16, 0.0, 1.0)
 
-    score = round(
+    raw_score = round(
         _clamp(
             (region_component * 0.28)
             + (distribution_component * 0.18)
@@ -293,8 +302,12 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
     )
 
     source_is_jpeg = mime_type == "image/jpeg" and image_bytes.startswith(b"\xff\xd8\xff")
-    confidence = round(_clamp(0.52 + (score * 0.42) + (0.06 if source_is_jpeg else 0.0), 0.0, 1.0), 4)
-    verdict = "suspicious" if score >= 0.5 else "inconclusive" if score >= 0.25 else "clean"
+    score = raw_score if source_is_jpeg else round(raw_score * 0.55, 4)
+    confidence = round(
+        _clamp(0.52 + (score * 0.42) + (0.06 if source_is_jpeg else -0.08), 0.0, 1.0),
+        4,
+    )
+    verdict = "suspicious" if source_is_jpeg and score >= 0.5 else "inconclusive" if score >= 0.25 else "clean"
 
     regions = _connected_regions(suspicious_mask, normalized_block_scores)
     artifact_map = _build_artifact_map(
@@ -306,6 +319,7 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
     metrics: dict[str, float | bool | str] = {
         "source_is_jpeg": source_is_jpeg,
         "block_inconsistency_score": score,
+        "raw_block_inconsistency_score": raw_score,
         "regional_variation": round(region_variation, 4),
         "strongest_region_delta": round(strongest_region_delta, 4),
         "dct_energy_variation": round(dct_variation, 4),
@@ -319,7 +333,7 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
         score=score,
         confidence=confidence,
         verdict=verdict,
-        explanation=_explanation(score, region_variation, suspicious_ratio),
+        explanation=_explanation(score, region_variation, suspicious_ratio, source_is_jpeg=source_is_jpeg),
         metrics=metrics,
         artifact_map=artifact_map,
         regions=regions,
