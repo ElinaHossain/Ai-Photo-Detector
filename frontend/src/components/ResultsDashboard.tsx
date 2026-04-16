@@ -1,8 +1,7 @@
 import { AnalysisResult } from "../App";
-import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { Calendar, Flame } from "lucide-react";
+import { Calendar, FileImage, Flame, Gauge, Layers } from "lucide-react";
 import ForensicTestCard from "./ForensicTestCard";
 import { normalizeForensicTests } from "../utils/forensicNormalizer";
 
@@ -10,6 +9,47 @@ interface ResultsDashboardProps {
   results: AnalysisResult[];
   selectedResult: AnalysisResult;
   onSelectResult: (result: AnalysisResult) => void;
+}
+
+const sectionStyle = {
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  borderRadius: "8px",
+  boxShadow: "0 18px 48px rgba(15, 23, 42, 0.06)",
+  padding: "1.5rem",
+};
+
+const mediaFrameStyle = {
+  width: "min(100%, 640px)",
+  aspectRatio: "4 / 3",
+  borderRadius: "8px",
+  backgroundColor: "#0f172a",
+  border: "1px solid #d8dee8",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  overflow: "hidden",
+};
+
+const evidenceCardStyle = {
+  border: "1px solid #e5e7eb",
+  borderRadius: "8px",
+  backgroundColor: "#f8fafc",
+  padding: "1rem",
+};
+
+function formatPercentMetric(value?: number) {
+  return typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
+}
+
+function formatRatioMetric(value?: number) {
+  if (typeof value !== "number") return "N/A";
+  const asPercent = value <= 1 ? value * 100 : value;
+  return `${asPercent.toFixed(2)}%`;
+}
+
+function formatFileSize(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
 export function ResultsDashboard({
@@ -30,45 +70,60 @@ export function ResultsDashboard({
         ? new URL(rawHeatmapUrl, apiBaseUrl).toString()
         : null;
 
-  const forensicTests = normalizeForensicTests(selectedResult);
+  const forensicTests = normalizeForensicTests(selectedResult)
+    .slice()
+    .sort((first, second) => second.score - first.score);
+  const resultLabel = selectedResult.isAIGenerated ? "AI generated" : "Real photo";
+  const resultTone = selectedResult.isAIGenerated
+    ? {
+        backgroundColor: "#fff1f2",
+        color: "#be123c",
+        border: "1px solid #fecdd3",
+      }
+    : {
+        backgroundColor: "#ecfdf5",
+        color: "#047857",
+        border: "1px solid #bbf7d0",
+      };
 
-  const formatPercentMetric = (value?: number) =>
-    typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
-
-  const formatRatioMetric = (value?: number) => {
-    if (typeof value !== "number") return "N/A";
-    const asPercent = value <= 1 ? value * 100 : value;
-    return `${asPercent.toFixed(2)}%`;
-  };
+  const summaryItems = [
+    {
+      label: "Confidence",
+      value: `${selectedResult.confidence.toFixed(1)}%`,
+      icon: Gauge,
+    },
+    {
+      label: "Forensic tests",
+      value: String(forensicTests.length),
+      icon: Layers,
+    },
+    {
+      label: "File size",
+      value: formatFileSize(selectedResult.fileSize),
+      icon: FileImage,
+    },
+  ];
 
   return (
-    <div className="space-y-6" style={{ width: "100%" }}>
-      {/* TOP IMAGE + INFO */}
-      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
+    <div style={{ display: "grid", gap: "1rem", width: "100%" }}>
+      <section style={sectionStyle}>
         <div
-          className="flex flex-col md:flex-row gap-6"
-          style={{ alignItems: "stretch" }}
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1.5rem",
+            alignItems: "stretch",
+          }}
         >
           <div
-            className="md:w-1/2"
             style={{
+              flex: "1 1 480px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <div
-              className="rounded-lg border"
-              style={{
-                width: "min(100%, 720px)",
-                aspectRatio: "4 / 3",
-                backgroundColor: "#0f172a",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
-              }}
-            >
+            <div style={mediaFrameStyle}>
               <img
                 src={selectedResult.imageUrl}
                 alt={selectedResult.fileName}
@@ -82,65 +137,117 @@ export function ResultsDashboard({
           </div>
 
           <div
-            className="md:w-1/2 space-y-4"
             style={{
+              flex: "1 1 420px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
+              gap: "1.25rem",
+              minWidth: 0,
             }}
           >
             <div>
-              <h3>{selectedResult.fileName}</h3>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div
+                className="flex items-center gap-2"
+                style={{ color: "#64748b", marginBottom: "0.5rem" }}
+              >
                 <Calendar className="w-4 h-4" />
-                {selectedResult.uploadDate.toLocaleString()}
+                <span className="text-sm">
+                  {selectedResult.uploadDate.toLocaleString()}
+                </span>
               </div>
+              <div
+                className="flex items-center justify-between gap-3"
+                style={{ marginBottom: "0.5rem" }}
+              >
+                <h3
+                  style={{
+                    color: "#111827",
+                    fontWeight: 700,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {selectedResult.fileName}
+                </h3>
+                <Badge variant="outline" style={resultTone}>
+                  {resultLabel}
+                </Badge>
+              </div>
+              <p className="text-sm" style={{ color: "#64748b" }}>
+                The image was checked against model confidence and forensic signals.
+              </p>
             </div>
 
             <div>
-              <div className="flex justify-between text-sm">
-                <span>Detection Result</span>
-                <Badge
-                  variant={
-                    selectedResult.isAIGenerated
-                      ? "destructive"
-                      : "default"
-                  }
-                >
-                  {selectedResult.isAIGenerated
-                    ? "AI Generated"
-                    : "Real Photo"}
-                </Badge>
+              <div className="flex justify-between text-sm" style={{ color: "#475569" }}>
+                <span>Overall confidence</span>
+                <span>{selectedResult.confidence.toFixed(1)}%</span>
               </div>
+              <Progress value={selectedResult.confidence} />
+            </div>
 
-              <div className="mt-2">
-                <div className="flex justify-between text-sm">
-                  <span>Confidence</span>
-                  <span>
-                    {selectedResult.confidence.toFixed(1)}%
-                  </span>
-                </div>
-                <Progress value={selectedResult.confidence} />
-              </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: "0.75rem",
+              }}
+            >
+              {summaryItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div key={item.label} style={evidenceCardStyle}>
+                    <Icon className="w-4 h-4" style={{ color: "#2563eb" }} />
+                    <p
+                      className="text-xs"
+                      style={{ color: "#64748b", marginTop: "0.5rem" }}
+                    >
+                      {item.label}
+                    </p>
+                    <p style={{ color: "#111827", fontWeight: 700 }}>
+                      {item.value}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
-      </Card>
+      </section>
 
-      {/* FORENSIC TESTS (NEW SYSTEM) */}
-      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
-        <h3 className="mb-4 font-semibold text-gray-900">
-          Forensic Test Results
-        </h3>
+      <section style={sectionStyle}>
+        <div
+          className="flex items-center justify-between gap-3"
+          style={{ marginBottom: "1rem" }}
+        >
+          <div>
+            <h3 style={{ color: "#111827", fontWeight: 700 }}>
+              Forensic test results
+            </h3>
+            <p className="text-sm" style={{ color: "#64748b" }}>
+              Signals are ranked by score and evidence strength.
+            </p>
+          </div>
+          <Badge
+            variant="secondary"
+            style={{
+              backgroundColor: "#eef2f7",
+              color: "#334155",
+              border: "1px solid #d8dee8",
+            }}
+          >
+            {forensicTests.length} checks
+          </Badge>
+        </div>
 
         {forensicTests.length === 0 ? (
-          <p>No forensic test results available.</p>
+          <p style={{ color: "#64748b" }}>No forensic test results available.</p>
         ) : (
           <div
-            className="flex gap-4"
             style={{
-              overflowX: "auto",
-              paddingBottom: "0.25rem",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "1rem",
             }}
           >
             {forensicTests.map((test, index) => (
@@ -151,41 +258,38 @@ export function ResultsDashboard({
             ))}
           </div>
         )}
-      </Card>
+      </section>
 
-      {/* ELA */}
       {selectedResult.ela && (
-        <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
-          <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5" />
-            <h3>ELA Heatmap</h3>
+        <section style={sectionStyle}>
+          <div className="flex items-center gap-2" style={{ marginBottom: "1rem" }}>
+            <Flame className="w-5 h-5" style={{ color: "#f59e0b" }} />
+            <div>
+              <h3 style={{ color: "#111827", fontWeight: 700 }}>ELA evidence</h3>
+              <p className="text-sm" style={{ color: "#64748b" }}>
+                Error level response mapped over the source image.
+              </p>
+            </div>
           </div>
 
           <div
-            className="flex flex-col md:flex-row gap-6"
-            style={{ alignItems: "stretch" }}
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "1.5rem",
+              alignItems: "center",
+            }}
           >
             <div
-              className="md:w-1/2"
               style={{
+                flex: "1 1 480px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
               }}
             >
               {heatmapUrl ? (
-                <div
-                  className="rounded-lg border"
-                  style={{
-                    width: "min(100%, 720px)",
-                    aspectRatio: "4 / 3",
-                    backgroundColor: "#0f172a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                  }}
-                >
+                <div style={mediaFrameStyle}>
                   <img
                     src={heatmapUrl}
                     alt="ELA heatmap"
@@ -197,67 +301,79 @@ export function ResultsDashboard({
                   />
                 </div>
               ) : (
-                <div className="h-48 flex items-center justify-center text-gray-400">
-                  Heatmap not available
+                <div style={mediaFrameStyle}>
+                  <p style={{ color: "#94a3b8" }}>Heatmap not available</p>
                 </div>
               )}
             </div>
 
-            <div
-              className="md:w-1/2 space-y-4"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-            >
-              <div>
-                <div className="flex justify-between text-sm">
-                  <span>ELA Score</span>
-                  <span>
-                    {selectedResult.ela.score.toFixed(1)}%
-                  </span>
+            <div style={{ flex: "1 1 360px", display: "grid", gap: "1rem" }}>
+              <div style={evidenceCardStyle}>
+                <div className="flex justify-between text-sm" style={{ color: "#475569" }}>
+                  <span>ELA score</span>
+                  <span>{selectedResult.ela.score.toFixed(1)}%</span>
                 </div>
                 <Progress value={selectedResult.ela.score} />
               </div>
 
-              <p className="text-sm">
-                {selectedResult.ela.explanation}
-              </p>
+              <div style={evidenceCardStyle}>
+                <p style={{ color: "#111827", fontWeight: 700, marginBottom: "0.5rem" }}>
+                  Interpretation
+                </p>
+                <p className="text-sm" style={{ color: "#475569" }}>
+                  {selectedResult.ela.explanation}
+                </p>
+              </div>
 
               {selectedResult.ela.metrics && (
-                <div className="text-sm space-y-1">
-                  <div>
-                    Mean Intensity:{" "}
-                    {formatPercentMetric(
-                      selectedResult.ela.metrics.mean_intensity
-                    )}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <div style={evidenceCardStyle}>
+                    <p className="text-xs" style={{ color: "#64748b" }}>
+                      Mean intensity
+                    </p>
+                    <p style={{ color: "#111827", fontWeight: 700 }}>
+                      {formatPercentMetric(
+                        selectedResult.ela.metrics.mean_intensity
+                      )}
+                    </p>
                   </div>
-                  <div>
-                    Hotspot Ratio:{" "}
-                    {formatRatioMetric(
-                      selectedResult.ela.metrics.hotspot_ratio
-                    )}
+                  <div style={evidenceCardStyle}>
+                    <p className="text-xs" style={{ color: "#64748b" }}>
+                      Hotspot ratio
+                    </p>
+                    <p style={{ color: "#111827", fontWeight: 700 }}>
+                      {formatRatioMetric(
+                        selectedResult.ela.metrics.hotspot_ratio
+                      )}
+                    </p>
                   </div>
                 </div>
               )}
             </div>
           </div>
-        </Card>
+        </section>
       )}
 
-      {/* SUMMARY */}
-      <Card className="p-6 bg-purple-100 shadow-md border-[#8d70b3]/30">
-        <h3>Analysis Summary</h3>
-        <p>
-          This image has been analyzed using multiple detection
-          indicators. The overall confidence score of{" "}
-          {selectedResult.confidence.toFixed(1)}% suggests that it is{" "}
-          {selectedResult.isAIGenerated
-            ? "likely AI-generated"
-            : "likely real"}.
+      <section
+        style={{
+          ...sectionStyle,
+          backgroundColor: "#111827",
+          borderColor: "#111827",
+          color: "#ffffff",
+        }}
+      >
+        <h3 style={{ fontWeight: 700 }}>Analysis summary</h3>
+        <p style={{ color: "#cbd5e1", marginTop: "0.5rem" }}>
+          Overall confidence is {selectedResult.confidence.toFixed(1)}%, which
+          indicates the image is {selectedResult.isAIGenerated ? "likely AI-generated" : "likely real"}.
         </p>
-      </Card>
+      </section>
     </div>
   );
 }

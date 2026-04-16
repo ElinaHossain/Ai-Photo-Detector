@@ -1,7 +1,6 @@
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Progress } from "./ui/progress";
-import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import type { ForensicTest } from "../api/detector";
 
 interface Props {
@@ -10,25 +9,38 @@ interface Props {
 
 type DetailRecord = Record<string, unknown>;
 
-function getVerdictColor(verdict: string) {
+function getVerdictStyles(verdict: string) {
   switch (verdict) {
     case "clean":
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+      return {
+        icon: <CheckCircle className="w-4 h-4" style={{ color: "#059669" }} />,
+        bar: "#10b981",
+        badge: {
+          backgroundColor: "#ecfdf5",
+          color: "#047857",
+          border: "1px solid #bbf7d0",
+        },
+      };
     case "suspicious":
-      return "bg-rose-100 text-rose-700 border-rose-200";
+      return {
+        icon: <XCircle className="w-4 h-4" style={{ color: "#e11d48" }} />,
+        bar: "#e11d48",
+        badge: {
+          backgroundColor: "#fff1f2",
+          color: "#be123c",
+          border: "1px solid #fecdd3",
+        },
+      };
     default:
-      return "bg-amber-100 text-amber-700 border-amber-200";
-  }
-}
-
-function getIcon(verdict: string) {
-  switch (verdict) {
-    case "clean":
-      return <CheckCircle className="w-4 h-4 text-emerald-500" />;
-    case "suspicious":
-      return <XCircle className="w-4 h-4 text-rose-500" />;
-    default:
-      return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+      return {
+        icon: <AlertTriangle className="w-4 h-4" style={{ color: "#d97706" }} />,
+        bar: "#f59e0b",
+        badge: {
+          backgroundColor: "#fffbeb",
+          color: "#b45309",
+          border: "1px solid #fde68a",
+        },
+      };
   }
 }
 
@@ -81,6 +93,8 @@ export default function ForensicTestCard({ test }: Props) {
   const artifactMap = getArtifactMap(details);
   const regions = Array.isArray(details.regions) ? details.regions : [];
   const metrics = isDetailRecord(details.metrics) ? details.metrics : null;
+  const verdict = getVerdictStyles(test.verdict);
+  const score = Math.max(0, Math.min(1, test.score));
 
   const detailsEntries = Object.entries(details).filter(
     ([key, value]) =>
@@ -108,23 +122,30 @@ export default function ForensicTestCard({ test }: Props) {
 
   return (
     <Card
-      className="p-3 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
       style={{
-        width: "240px",
-        minWidth: "240px",
-        height: "248px",
+        width: "100%",
+        minHeight: "232px",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: "0.75rem",
+        gap: "0.875rem",
+        padding: "1rem",
+        borderRadius: "8px",
+        border: "1px solid #e5e7eb",
+        backgroundColor: "#ffffff",
+        boxShadow: "0 10px 28px rgba(15, 23, 42, 0.05)",
         overflow: "hidden",
       }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
-          {getIcon(test.verdict)}
+          {verdict.icon}
           <span
-            className="font-medium text-gray-900 text-sm"
             style={{
+              color: "#111827",
+              fontWeight: 700,
+              fontSize: "0.875rem",
+              lineHeight: 1.25,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -135,46 +156,73 @@ export default function ForensicTestCard({ test }: Props) {
           </span>
         </div>
 
-        <Badge
-          variant="outline"
-          className={`text-xs border shrink-0 ${getVerdictColor(test.verdict)}`}
-        >
+        <Badge variant="outline" style={verdict.badge}>
           {test.verdict}
         </Badge>
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-gray-600">Score</span>
-          <span className="text-gray-900">{(test.score * 100).toFixed(1)}%</span>
+      <div>
+        <div className="flex items-center justify-between text-xs" style={{ color: "#64748b" }}>
+          <span>Score</span>
+          <span style={{ color: "#111827", fontWeight: 700 }}>
+            {(score * 100).toFixed(1)}%
+          </span>
         </div>
-        <Progress value={test.score * 100} className="h-1.5" />
+        <div
+          style={{
+            height: "6px",
+            borderRadius: "999px",
+            backgroundColor: "#e5e7eb",
+            marginTop: "0.375rem",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: `${score * 100}%`,
+              height: "100%",
+              borderRadius: "999px",
+              backgroundColor: verdict.bar,
+            }}
+          />
+        </div>
       </div>
 
       {artifactMap && (
-        <div>
+        <div
+          style={{
+            height: "72px",
+            borderRadius: "8px",
+            border: "1px solid #e5e7eb",
+            backgroundColor: "#0f172a",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
           <img
             src={artifactMap.url}
             alt={`${test.test_name} artifact map`}
-            className="w-full rounded border bg-black"
             style={{
-              height: "88px",
+              width: "100%",
+              height: "100%",
               objectFit: "contain",
             }}
           />
         </div>
       )}
 
-      {detailsEntries.length > 0 && (
-        <div className="space-y-1 pt-2 border-t border-[#8d70b3]/20">
-          {detailsEntries.map(([key, value]) => (
+      {detailsEntries.length > 0 ? (
+        <div style={{ display: "grid", gap: "0.375rem" }}>
+          {detailsEntries.slice(0, artifactMap ? 1 : 2).map(([key, value]) => (
             <div key={key} className="text-xs">
-              {key === "explanation" && value ? (
+              {key === "explanation" ? (
                 <p
-                  className="text-xs text-gray-600"
                   style={{
+                    color: "#64748b",
                     display: "-webkit-box",
-                    WebkitLineClamp: artifactMap ? 2 : 4,
+                    WebkitLineClamp: artifactMap ? 2 : 3,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -183,8 +231,8 @@ export default function ForensicTestCard({ test }: Props) {
                 </p>
               ) : (
                 <div className="flex justify-between gap-3">
-                  <span className="text-gray-500">{formatDetailKey(key)}</span>
-                  <span className="text-gray-900 text-right">
+                  <span style={{ color: "#64748b" }}>{formatDetailKey(key)}</span>
+                  <span style={{ color: "#111827", textAlign: "right" }}>
                     {formatDetailValue(value)}
                   </span>
                 </div>
@@ -192,24 +240,35 @@ export default function ForensicTestCard({ test }: Props) {
             </div>
           ))}
         </div>
+      ) : (
+        <p className="text-xs" style={{ color: "#94a3b8" }}>
+          Basic indicator score returned.
+        </p>
       )}
 
       {(regions.length > 0 || metricEntries.length > 0) && (
         <div
-          className="space-y-1 pt-2 border-t border-[#8d70b3]/20"
-          style={{ marginTop: "auto" }}
+          style={{
+            display: "grid",
+            gap: "0.375rem",
+            marginTop: "auto",
+            paddingTop: "0.75rem",
+            borderTop: "1px solid #eef2f7",
+          }}
         >
           {regions.length > 0 && (
             <div className="flex justify-between gap-3 text-xs">
-              <span className="text-gray-500">Highlighted Regions</span>
-              <span className="text-gray-900">{regions.length}</span>
+              <span style={{ color: "#64748b" }}>Highlighted regions</span>
+              <span style={{ color: "#111827", fontWeight: 700 }}>
+                {regions.length}
+              </span>
             </div>
           )}
 
-          {metricEntries.slice(0, artifactMap ? 2 : 3).map(([key, value]) => (
+          {metricEntries.slice(0, artifactMap ? 1 : 2).map(([key, value]) => (
             <div key={key} className="flex justify-between gap-3 text-xs">
-              <span className="text-gray-500">{formatDetailKey(key)}</span>
-              <span className="text-gray-900 text-right">
+              <span style={{ color: "#64748b" }}>{formatDetailKey(key)}</span>
+              <span style={{ color: "#111827", textAlign: "right" }}>
                 {formatDetailValue(value)}
               </span>
             </div>
