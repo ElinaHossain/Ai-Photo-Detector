@@ -112,13 +112,13 @@ export default function ForensicTestCard({ test }: Props) {
       style={{
         width: "100%",
         minWidth: 0,
-        minHeight: "224px",
+        minHeight: "142px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: "0.75rem",
+        gap: "0.625rem",
         borderRadius: "8px",
-        boxShadow: "0 10px 28px rgba(61, 48, 77, 0.12)",
+        boxShadow: "0 8px 22px rgba(61, 48, 77, 0.1)",
         overflow: "hidden",
       }}
     >
@@ -154,41 +154,16 @@ export default function ForensicTestCard({ test }: Props) {
         <Progress value={test.score * 100} className="h-1.5" />
       </div>
 
-      {artifactMap && (
-        <div
-          style={{
-            height: "84px",
-            borderRadius: "8px",
-            border: "1px solid rgba(141, 112, 179, 0.22)",
-            backgroundColor: "#0f172a",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-          }}
-        >
-          <img
-            src={artifactMap.url}
-            alt={`${test.test_name} artifact map`}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "contain",
-            }}
-          />
-        </div>
-      )}
-
       {detailsEntries.length > 0 && (
-        <div className="space-y-1 pt-2 border-t border-[#8d70b3]/20">
-          {detailsEntries.map(([key, value]) => (
+        <div className="space-y-1">
+          {detailsEntries.slice(0, 1).map(([key, value]) => (
             <div key={key} className="text-xs">
               {key === "explanation" && value ? (
                 <p
                   className="text-xs text-gray-600"
                   style={{
                     display: "-webkit-box",
-                    WebkitLineClamp: artifactMap ? 2 : 4,
+                    WebkitLineClamp: 2,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -220,7 +195,14 @@ export default function ForensicTestCard({ test }: Props) {
             </div>
           )}
 
-          {metricEntries.slice(0, artifactMap ? 2 : 3).map(([key, value]) => (
+          {artifactMap && (
+            <div className="flex justify-between gap-3 text-xs">
+              <span className="text-gray-500">Evidence Map</span>
+              <span className="text-gray-900">Available</span>
+            </div>
+          )}
+
+          {metricEntries.slice(0, artifactMap ? 1 : 2).map(([key, value]) => (
             <div key={key} className="flex justify-between gap-3 text-xs">
               <span className="text-gray-500">{formatDetailKey(key)}</span>
               <span className="text-gray-900 text-right">

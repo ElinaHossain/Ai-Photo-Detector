@@ -54,7 +54,8 @@ function MediaFrame({
         width: `min(100%, ${maxWidth})`,
         aspectRatio: "4 / 3",
         borderRadius: "8px",
-        backgroundColor: "#0f172a",
+        backgroundColor: "transparent",
+        borderColor: "rgba(141, 112, 179, 0.18)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -119,8 +120,7 @@ export function ResultsDashboard({
   return (
     <div
       style={{
-        width: "min(100%, 1440px)",
-        margin: "0 auto",
+        width: "100%",
         display: "grid",
         gap: "1rem",
       }}
@@ -291,7 +291,7 @@ export function ResultsDashboard({
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "1rem",
+              gap: "0.75rem",
             }}
           >
             {forensicTests.map((test, index) => (

@@ -244,8 +244,8 @@ export default function App() {
                 <div
                   className="flex justify-between items-center"
                   style={{
-                    margin: "1rem auto",
-                    width: "min(100%, 1440px)",
+                    margin: "1rem 0",
+                    width: "100%",
                   }}
                 >
                   <h2 className="text-white">Analysis Results</h2>
