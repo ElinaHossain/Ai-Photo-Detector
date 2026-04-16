@@ -49,15 +49,36 @@ export function ResultsDashboard({
           className="flex flex-col md:flex-row gap-6"
           style={{ alignItems: "stretch" }}
         >
-          <div className="md:w-1/2">
-            <img
-              src={selectedResult.imageUrl}
-              alt={selectedResult.fileName}
-              className="w-full object-cover rounded-lg border"
+          <div
+            className="md:w-1/2"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <div
+              className="rounded-lg border"
               style={{
-                height: "clamp(18rem, 28vw, 34rem)",
+                width: "min(100%, 720px)",
+                aspectRatio: "4 / 3",
+                backgroundColor: "#0f172a",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
               }}
-            />
+            >
+              <img
+                src={selectedResult.imageUrl}
+                alt={selectedResult.fileName}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
           </div>
 
           <div
@@ -144,17 +165,37 @@ export function ResultsDashboard({
             className="flex flex-col md:flex-row gap-6"
             style={{ alignItems: "stretch" }}
           >
-            <div className="md:w-1/2">
+            <div
+              className="md:w-1/2"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               {heatmapUrl ? (
-                <img
-                  src={heatmapUrl}
-                  alt="ELA heatmap"
-                  className="w-full rounded-lg border object-contain bg-black"
+                <div
+                  className="rounded-lg border"
                   style={{
-                    maxHeight: "none",
-                    height: "clamp(22rem, 38vw, 44rem)",
+                    width: "min(100%, 720px)",
+                    aspectRatio: "4 / 3",
+                    backgroundColor: "#0f172a",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
                   }}
-                />
+                >
+                  <img
+                    src={heatmapUrl}
+                    alt="ELA heatmap"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
               ) : (
                 <div className="h-48 flex items-center justify-center text-gray-400">
                   Heatmap not available
