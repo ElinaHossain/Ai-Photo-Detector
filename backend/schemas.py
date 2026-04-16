@@ -35,6 +35,20 @@ class ELAMetadata(BaseModel):
     heatmap: ELAHeatmap
 
 
+class ForensicVerdict(str, Enum):
+    CLEAN = "clean"
+    SUSPICIOUS = "suspicious"
+    INCONCLUSIVE = "inconclusive"
+
+
+class ForensicTest(BaseModel):
+    test_name: str
+    score: float = Field(..., ge=0.0, le=1.0)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    verdict: ForensicVerdict
+    details: dict[str, Any]
+
+
 class DetectionMetadata(BaseModel):
     requestId: str
     fileName: str
@@ -50,6 +64,7 @@ class DetectionResponse(BaseModel):
     isAIGenerated: bool
     confidence: float = Field(..., ge=0.0, le=100.0)
     indicators: list[Indicator]
+    forensic_tests: list[ForensicTest] = Field(default_factory=list)
     metadata: DetectionMetadata | None = None
 
 

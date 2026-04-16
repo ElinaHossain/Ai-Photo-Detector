@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.detector.ela import analyze_ela
+from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts
 
 
 # Basic magic-byte checks keep preprocessing dependency-free.
@@ -75,7 +76,13 @@ def preprocess_image(
 
     if request_id:
         ela_analysis = analyze_ela(image_bytes=image_bytes, request_id=request_id)
+        jpeg_artifact_analysis = analyze_jpeg_artifacts(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            request_id=request_id,
+        )
         model_input["ela_anomaly_score"] = ela_analysis.score
+        model_input["jpeg_compression_inconsistency_score"] = jpeg_artifact_analysis.score
         metadata["ela"] = {
             "score": ela_analysis.score,
             "explanation": ela_analysis.explanation,
@@ -85,5 +92,8 @@ def preprocess_image(
                 "mediaType": ela_analysis.heatmap.media_type,
             },
         }
+        metadata["forensic_tests"] = [
+            jpeg_artifact_analysis.to_forensic_test(),
+        ]
 
     return PreprocessOutput(model_input=model_input, metadata=metadata)

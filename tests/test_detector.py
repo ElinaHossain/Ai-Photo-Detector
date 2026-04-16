@@ -1,9 +1,11 @@
 import io
 import math
 
+import numpy as np
 import pytest
 from PIL import Image
 
+from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts
 from backend.detector.postprocess import _status_for_value, postprocess_prediction
 from backend.detector.predict import ModelUnavailableError, PredictionOutput, predict_scores
 from backend.detector.preprocess import preprocess_image
@@ -62,6 +64,54 @@ class TestPreprocessImage:
         assert heatmap["mediaType"] == "image/png"
         assert heatmap["url"].startswith("data:image/png;base64,")
         assert "artifact" not in result.metadata["ela"]
+        assert result.metadata["forensic_tests"][0]["test_name"] == "JPEG Compression Artifact Analysis"
+
+
+class TestJPEGArtifactAnalysis:
+    @staticmethod
+    def _jpeg_bytes(image: Image.Image, *, quality: int) -> bytes:
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=quality, subsampling=0)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _textured_image(size: tuple[int, int] = (192, 192)) -> Image.Image:
+        width, height = size
+        y_coords, x_coords = np.mgrid[0:height, 0:width]
+        red = 80 + x_coords * 0.55 + 18 * np.sin(y_coords / 9)
+        green = 90 + y_coords * 0.45 + 16 * np.cos(x_coords / 13)
+        blue = 120 + (x_coords + y_coords) * 0.25 + 10 * np.sin((x_coords + y_coords) / 11)
+        noise = np.random.default_rng(7).normal(0, 4, (height, width))
+        pixels = np.stack([red + noise, green + noise, blue + noise], axis=2)
+        return Image.fromarray(np.clip(pixels, 0, 255).astype("uint8"), "RGB")
+
+    def test_scores_localized_recompression_above_clean_baseline(self):
+        base_image = self._textured_image()
+        clean_bytes = self._jpeg_bytes(base_image, quality=92)
+
+        recompressed_base = Image.open(io.BytesIO(clean_bytes)).convert("RGB")
+        patch = recompressed_base.crop((64, 64, 136, 136))
+        low_quality_patch = Image.open(io.BytesIO(self._jpeg_bytes(patch, quality=25))).convert("RGB")
+        manipulated = recompressed_base.copy()
+        manipulated.paste(low_quality_patch, (64, 64))
+        manipulated_bytes = self._jpeg_bytes(manipulated, quality=95)
+
+        clean = analyze_jpeg_artifacts(
+            image_bytes=clean_bytes,
+            mime_type="image/jpeg",
+            request_id="clean",
+        )
+        edited = analyze_jpeg_artifacts(
+            image_bytes=manipulated_bytes,
+            mime_type="image/jpeg",
+            request_id="edited",
+        )
+
+        assert edited.score > clean.score + 0.15
+        assert edited.metrics["block_inconsistency_score"] == edited.score
+        assert edited.verdict == "suspicious"
+        assert edited.artifact_map.data_url.startswith("data:image/png;base64,")
+        assert edited.regions
 
 
 class TestPredictScores:

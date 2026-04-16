@@ -103,6 +103,73 @@ def test_detect_success_returns_inline_ela_heatmap(client, sample_png_bytes, mon
     assert "artifacts" not in payload["metadata"]
 
 
+def test_detect_success_returns_forensic_tests(client, sample_png_bytes, monkeypatch):
+    monkeypatch.setattr(
+        "backend.routes.preprocess_image",
+        lambda **kwargs: PreprocessOutput(
+            model_input={
+                "entropy": 1.0,
+                "zero_ratio": 0.5,
+                "size_log": 1.0,
+                "size_norm": 0.1,
+                "jpeg_compression_inconsistency_score": 0.72,
+            },
+            metadata={
+                "mime_type": "image/png",
+                "byte_length": len(sample_png_bytes),
+                "deterministic": False,
+                "forensic_tests": [
+                    {
+                        "test_name": "JPEG Compression Artifact Analysis",
+                        "score": 0.72,
+                        "confidence": 0.86,
+                        "verdict": "suspicious",
+                        "details": {
+                            "block_inconsistency_score": 0.72,
+                            "artifact_map": {
+                                "url": "data:image/png;base64,artifact123",
+                                "mediaType": "image/png",
+                            },
+                            "regions": [{"x": 0.25, "y": 0.25, "width": 0.5, "height": 0.5, "score": 0.9}],
+                        },
+                    }
+                ],
+            },
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.predict_scores",
+        lambda **kwargs: PredictionOutput(
+            ai_probability=84.62,
+            raw_scores={"ai_probability": 84.62},
+            model_name="configured_model",
+            used_fallback=False,
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.postprocess_prediction",
+        lambda **kwargs: PostprocessOutput(
+            isAIGenerated=True,
+            confidence=84.62,
+            indicators=[
+                {"label": "Pixel Consistency", "value": 88.39, "status": "pass"},
+            ],
+        ),
+    )
+
+    response = client.post(
+        "/api/detect",
+        files={"file": ("sample.png", sample_png_bytes, "image/png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    jpeg_test = payload["forensic_tests"][0]
+    assert jpeg_test["test_name"] == "JPEG Compression Artifact Analysis"
+    assert jpeg_test["score"] == 0.72
+    assert jpeg_test["details"]["artifact_map"]["url"].startswith("data:image/png;base64,")
+
+
 def test_detect_missing_file_returns_400(client):
     response = client.post("/api/detect")
 

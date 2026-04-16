@@ -8,6 +8,8 @@ interface Props {
   test: ForensicTest;
 }
 
+type DetailRecord = Record<string, unknown>;
+
 function getVerdictColor(verdict: string) {
   switch (verdict) {
     case "clean":
@@ -44,13 +46,54 @@ function formatDetailValue(value: unknown) {
   if (typeof value === "boolean") {
     return value ? "Yes" : "No";
   }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? String(value) : value.toFixed(3);
+  }
+  if (Array.isArray(value)) {
+    return `${value.length} item${value.length === 1 ? "" : "s"}`;
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
   return String(value);
 }
 
+function isDetailRecord(value: unknown): value is DetailRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getArtifactMap(details: DetailRecord) {
+  const artifactMap = details.artifact_map;
+  if (!isDetailRecord(artifactMap) || typeof artifactMap.url !== "string") {
+    return null;
+  }
+  return {
+    url: artifactMap.url,
+    mediaType:
+      typeof artifactMap.mediaType === "string"
+        ? artifactMap.mediaType
+        : "image/png",
+  };
+}
+
 export default function ForensicTestCard({ test }: Props) {
-  const detailsEntries = Object.entries(test.details || {}).filter(
-    ([, value]) => value !== ""
+  const details = test.details || {};
+  const artifactMap = getArtifactMap(details);
+  const regions = Array.isArray(details.regions) ? details.regions : [];
+  const metrics = isDetailRecord(details.metrics) ? details.metrics : null;
+
+  const detailsEntries = Object.entries(details).filter(
+    ([key, value]) =>
+      value !== "" &&
+      !["artifact_map", "regions", "metrics"].includes(key)
   );
+  const metricEntries = metrics
+    ? Object.entries(metrics).filter(
+        ([, value]) =>
+          ["string", "number", "boolean"].includes(typeof value) &&
+          value !== ""
+      )
+    : [];
 
   return (
     <Card className="p-4 bg-white/80 border border-[#8d70b3]/20 shadow-sm">
@@ -76,6 +119,16 @@ export default function ForensicTestCard({ test }: Props) {
         <Progress value={test.score * 100} className="h-1.5" />
       </div>
 
+      {artifactMap && (
+        <div className="mb-3">
+          <img
+            src={artifactMap.url}
+            alt={`${test.test_name} artifact map`}
+            className="w-full rounded border object-contain bg-black"
+          />
+        </div>
+      )}
+
       {detailsEntries.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-[#8d70b3]/20">
           {detailsEntries.map(([key, value]) => (
@@ -92,6 +145,26 @@ export default function ForensicTestCard({ test }: Props) {
                   </span>
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(regions.length > 0 || metricEntries.length > 0) && (
+        <div className="space-y-2 pt-2 mt-2 border-t border-[#8d70b3]/20">
+          {regions.length > 0 && (
+            <div className="flex justify-between gap-3 text-sm">
+              <span className="text-gray-500">Highlighted Regions</span>
+              <span className="text-gray-900">{regions.length}</span>
+            </div>
+          )}
+
+          {metricEntries.slice(0, 6).map(([key, value]) => (
+            <div key={key} className="flex justify-between gap-3 text-sm">
+              <span className="text-gray-500">{formatDetailKey(key)}</span>
+              <span className="text-gray-900 text-right">
+                {formatDetailValue(value)}
+              </span>
             </div>
           ))}
         </div>
