@@ -108,14 +108,17 @@ export default function ForensicTestCard({ test }: Props) {
 
   return (
     <Card
-      className="p-3 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
+      className="p-4 bg-white/80 border border-[#8d70b3]/20"
       style={{
-        width: "240px",
-        minWidth: "240px",
-        height: "248px",
+        width: "100%",
+        minWidth: 0,
+        minHeight: "224px",
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: "0.75rem",
+        borderRadius: "8px",
+        boxShadow: "0 10px 28px rgba(61, 48, 77, 0.12)",
         overflow: "hidden",
       }}
     >
@@ -152,13 +155,24 @@ export default function ForensicTestCard({ test }: Props) {
       </div>
 
       {artifactMap && (
-        <div>
+        <div
+          style={{
+            height: "84px",
+            borderRadius: "8px",
+            border: "1px solid rgba(141, 112, 179, 0.22)",
+            backgroundColor: "#0f172a",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
           <img
             src={artifactMap.url}
             alt={`${test.test_name} artifact map`}
-            className="w-full rounded border bg-black"
             style={{
-              height: "88px",
+              width: "100%",
+              height: "100%",
               objectFit: "contain",
             }}
           />

@@ -1,8 +1,9 @@
 import { AnalysisResult } from "../App";
+import type { ReactNode } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { Calendar, Flame } from "lucide-react";
+import { Calendar, CheckCircle, Flame, Gauge, Image as ImageIcon, Layers } from "lucide-react";
 import ForensicTestCard from "./ForensicTestCard";
 import { normalizeForensicTests } from "../utils/forensicNormalizer";
 
@@ -10,6 +11,59 @@ interface ResultsDashboardProps {
   results: AnalysisResult[];
   selectedResult: AnalysisResult;
   onSelectResult: (result: AnalysisResult) => void;
+}
+
+const panelStyle = {
+  borderRadius: "8px",
+  border: "1px solid rgba(141, 112, 179, 0.3)",
+  background: "rgba(255, 255, 255, 0.78)",
+  boxShadow: "0 14px 34px rgba(61, 48, 77, 0.16)",
+};
+
+const mutedPanelStyle = {
+  borderRadius: "8px",
+  border: "1px solid rgba(141, 112, 179, 0.24)",
+  background: "rgba(245, 240, 255, 0.58)",
+};
+
+function formatPercentMetric(value?: number) {
+  return typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
+}
+
+function formatRatioMetric(value?: number) {
+  if (typeof value !== "number") return "N/A";
+  const asPercent = value <= 1 ? value * 100 : value;
+  return `${asPercent.toFixed(2)}%`;
+}
+
+function formatFileSize(bytes: number) {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function MediaFrame({
+  children,
+  maxWidth = "620px",
+}: {
+  children: ReactNode;
+  maxWidth?: string;
+}) {
+  return (
+    <div
+      className="border"
+      style={{
+        width: `min(100%, ${maxWidth})`,
+        aspectRatio: "4 / 3",
+        borderRadius: "8px",
+        backgroundColor: "#0f172a",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function ResultsDashboard({
@@ -31,44 +85,130 @@ export function ResultsDashboard({
         : null;
 
   const forensicTests = normalizeForensicTests(selectedResult);
-
-  const formatPercentMetric = (value?: number) =>
-    typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
-
-  const formatRatioMetric = (value?: number) => {
-    if (typeof value !== "number") return "N/A";
-    const asPercent = value <= 1 ? value * 100 : value;
-    return `${asPercent.toFixed(2)}%`;
-  };
+  const detectionLabel = selectedResult.isAIGenerated
+    ? "AI Generated"
+    : "Real Photo";
+  const elaScore = selectedResult.ela?.score;
+  const statCards = [
+    {
+      label: "Detection",
+      value: detectionLabel,
+      detail: `${selectedResult.confidence.toFixed(1)}% confidence`,
+      icon: CheckCircle,
+    },
+    {
+      label: "Confidence",
+      value: `${selectedResult.confidence.toFixed(1)}%`,
+      detail: "overall model score",
+      icon: Gauge,
+    },
+    {
+      label: "Forensic Tests",
+      value: String(forensicTests.length),
+      detail: "signals reviewed",
+      icon: Layers,
+    },
+    {
+      label: "File Size",
+      value: formatFileSize(selectedResult.fileSize),
+      detail: selectedResult.fileName,
+      icon: ImageIcon,
+    },
+  ];
 
   return (
-    <div className="space-y-6" style={{ width: "100%" }}>
-      {/* TOP IMAGE + INFO */}
-      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
-        <div
-          className="flex flex-col md:flex-row gap-6"
-          style={{ alignItems: "stretch" }}
-        >
-          <div
-            className="md:w-1/2"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <div
-              className="rounded-lg border"
+    <div
+      style={{
+        width: "min(100%, 1440px)",
+        margin: "0 auto",
+        display: "grid",
+        gap: "1rem",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: "1rem",
+        }}
+      >
+        {statCards.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Card
+              key={item.label}
+              className="p-4"
               style={{
-                width: "min(100%, 720px)",
-                aspectRatio: "4 / 3",
-                backgroundColor: "#0f172a",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                overflow: "hidden",
+                ...panelStyle,
+                minHeight: "116px",
+                justifyContent: "space-between",
               }}
             >
+              <div className="flex items-center justify-between gap-3">
+                <span
+                  className="text-xs"
+                  style={{ color: "#655080", fontWeight: 600 }}
+                >
+                  {item.label}
+                </span>
+                <Icon className="w-4 h-4 text-[#655080]" />
+              </div>
+              <div>
+                <p
+                  style={{
+                    color: "#1f2937",
+                    fontSize: "1.6rem",
+                    fontWeight: 700,
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {item.value}
+                </p>
+                <p
+                  className="text-xs"
+                  style={{
+                    color: "#655080",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {item.detail}
+                </p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gap: "1rem",
+          alignItems: "stretch",
+        }}
+      >
+        <Card className="p-5" style={panelStyle}>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className="font-semibold text-gray-900">Source Image</h3>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Calendar className="w-4 h-4" />
+                {selectedResult.uploadDate.toLocaleString()}
+              </div>
+            </div>
+            <Badge
+              variant={
+                selectedResult.isAIGenerated ? "destructive" : "default"
+              }
+            >
+              {detectionLabel}
+            </Badge>
+          </div>
+
+          <div className="flex justify-center">
+            <MediaFrame>
               <img
                 src={selectedResult.imageUrl}
                 alt={selectedResult.fileName}
@@ -78,69 +218,80 @@ export function ResultsDashboard({
                   objectFit: "contain",
                 }}
               />
-            </div>
+            </MediaFrame>
           </div>
+        </Card>
 
-          <div
-            className="md:w-1/2 space-y-4"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
-            <div>
-              <h3>{selectedResult.fileName}</h3>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Calendar className="w-4 h-4" />
-                {selectedResult.uploadDate.toLocaleString()}
-              </div>
-            </div>
+        <Card className="p-5" style={panelStyle}>
+          <h3 className="font-semibold text-gray-900 mb-2">Result Summary</h3>
+          <p className="text-sm text-gray-600 mb-5">
+            This report combines the model score with forensic checks and visual evidence maps.
+          </p>
 
-            <div>
+          <div className="space-y-4">
+            <div style={mutedPanelStyle} className="p-4">
               <div className="flex justify-between text-sm">
-                <span>Detection Result</span>
-                <Badge
-                  variant={
-                    selectedResult.isAIGenerated
-                      ? "destructive"
-                      : "default"
-                  }
-                >
-                  {selectedResult.isAIGenerated
-                    ? "AI Generated"
-                    : "Real Photo"}
-                </Badge>
+                <span>Overall Confidence</span>
+                <span>{selectedResult.confidence.toFixed(1)}%</span>
               </div>
+              <Progress value={selectedResult.confidence} className="mt-2" />
+            </div>
 
-              <div className="mt-2">
+            {typeof elaScore === "number" && (
+              <div style={mutedPanelStyle} className="p-4">
                 <div className="flex justify-between text-sm">
-                  <span>Confidence</span>
-                  <span>
-                    {selectedResult.confidence.toFixed(1)}%
-                  </span>
+                  <span>ELA Score</span>
+                  <span>{elaScore.toFixed(1)}%</span>
                 </div>
-                <Progress value={selectedResult.confidence} />
+                <Progress value={elaScore} className="mt-2" />
+              </div>
+            )}
+
+            <div
+              style={{
+                ...mutedPanelStyle,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gap: "0.75rem",
+              }}
+              className="p-4 text-sm"
+            >
+              <div>
+                <p className="text-gray-500">File</p>
+                <p className="text-gray-900" style={{ wordBreak: "break-word" }}>
+                  {selectedResult.fileName}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-500">Forensic checks</p>
+                <p className="text-gray-900">{forensicTests.length}</p>
               </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
 
-      {/* FORENSIC TESTS (NEW SYSTEM) */}
-      <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
-        <h3 className="mb-4 font-semibold text-gray-900">
-          Forensic Test Results
-        </h3>
+      <Card className="p-5" style={panelStyle}>
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="font-semibold text-gray-900">
+              Forensic Test Results
+            </h3>
+            <p className="text-sm text-gray-600">
+              Compression, consistency, and pattern checks.
+            </p>
+          </div>
+          <Badge variant="secondary">{forensicTests.length} checks</Badge>
+        </div>
 
         {forensicTests.length === 0 ? (
           <p>No forensic test results available.</p>
         ) : (
           <div
-            className="flex gap-4"
             style={{
-              overflowX: "auto",
-              paddingBottom: "0.25rem",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "1rem",
             }}
           >
             {forensicTests.map((test, index) => (
@@ -153,39 +304,29 @@ export function ResultsDashboard({
         )}
       </Card>
 
-      {/* ELA */}
       {selectedResult.ela && (
-        <Card className="p-6 shadow-md bg-white/80 border-[#8d70b3]/30">
+        <Card className="p-5" style={panelStyle}>
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5" />
-            <h3>ELA Heatmap</h3>
+            <div>
+              <h3 className="font-semibold text-gray-900">ELA Heatmap</h3>
+              <p className="text-sm text-gray-600">
+                Error level response mapped over the image.
+              </p>
+            </div>
           </div>
 
           <div
-            className="flex flex-col md:flex-row gap-6"
-            style={{ alignItems: "stretch" }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+              gap: "1rem",
+              alignItems: "center",
+            }}
           >
-            <div
-              className="md:w-1/2"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <div className="flex justify-center">
               {heatmapUrl ? (
-                <div
-                  className="rounded-lg border"
-                  style={{
-                    width: "min(100%, 720px)",
-                    aspectRatio: "4 / 3",
-                    backgroundColor: "#0f172a",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    overflow: "hidden",
-                  }}
-                >
+                <MediaFrame>
                   <img
                     src={heatmapUrl}
                     alt="ELA heatmap"
@@ -195,7 +336,7 @@ export function ResultsDashboard({
                       objectFit: "contain",
                     }}
                   />
-                </div>
+                </MediaFrame>
               ) : (
                 <div className="h-48 flex items-center justify-center text-gray-400">
                   Heatmap not available
@@ -203,41 +344,42 @@ export function ResultsDashboard({
               )}
             </div>
 
-            <div
-              className="md:w-1/2 space-y-4"
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-              }}
-            >
-              <div>
+            <div className="space-y-4">
+              <div style={mutedPanelStyle} className="p-4">
                 <div className="flex justify-between text-sm">
                   <span>ELA Score</span>
-                  <span>
-                    {selectedResult.ela.score.toFixed(1)}%
-                  </span>
+                  <span>{selectedResult.ela.score.toFixed(1)}%</span>
                 </div>
-                <Progress value={selectedResult.ela.score} />
+                <Progress value={selectedResult.ela.score} className="mt-2" />
               </div>
 
-              <p className="text-sm">
+              <p className="text-sm text-gray-700">
                 {selectedResult.ela.explanation}
               </p>
 
               {selectedResult.ela.metrics && (
-                <div className="text-sm space-y-1">
-                  <div>
-                    Mean Intensity:{" "}
-                    {formatPercentMetric(
-                      selectedResult.ela.metrics.mean_intensity
-                    )}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+                    gap: "0.75rem",
+                  }}
+                >
+                  <div style={mutedPanelStyle} className="p-3 text-sm">
+                    <p className="text-gray-500">Mean Intensity</p>
+                    <p className="text-gray-900">
+                      {formatPercentMetric(
+                        selectedResult.ela.metrics.mean_intensity
+                      )}
+                    </p>
                   </div>
-                  <div>
-                    Hotspot Ratio:{" "}
-                    {formatRatioMetric(
-                      selectedResult.ela.metrics.hotspot_ratio
-                    )}
+                  <div style={mutedPanelStyle} className="p-3 text-sm">
+                    <p className="text-gray-500">Hotspot Ratio</p>
+                    <p className="text-gray-900">
+                      {formatRatioMetric(
+                        selectedResult.ela.metrics.hotspot_ratio
+                      )}
+                    </p>
                   </div>
                 </div>
               )}
@@ -246,12 +388,10 @@ export function ResultsDashboard({
         </Card>
       )}
 
-      {/* SUMMARY */}
-      <Card className="p-6 bg-purple-100 shadow-md border-[#8d70b3]/30">
+      <Card className="p-5 bg-purple-100" style={panelStyle}>
         <h3>Analysis Summary</h3>
-        <p>
-          This image has been analyzed using multiple detection
-          indicators. The overall confidence score of{" "}
+        <p className="text-sm text-gray-700">
+          The overall confidence score of{" "}
           {selectedResult.confidence.toFixed(1)}% suggests that it is{" "}
           {selectedResult.isAIGenerated
             ? "likely AI-generated"
