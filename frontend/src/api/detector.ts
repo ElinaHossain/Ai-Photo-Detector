@@ -25,10 +25,19 @@ export interface ELAMetadata {
   heatmap: ELAHeatmap;
 }
 
+export interface ForensicTest {
+  test_name: string;
+  score: number;
+  confidence: number;
+  verdict: "clean" | "suspicious" | "inconclusive";
+  details: Record<string, unknown>;
+}
+
 export interface DetectImageResponse {
   isAIGenerated: boolean;
   confidence: number;
   indicators: DetectorIndicator[];
+  forensic_tests?: ForensicTest[];
   metadata?: {
     requestId: string;
     fileName: string;

@@ -2,7 +2,7 @@ import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
 import { CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import type { ForensicTest } from "../App";
+import type { ForensicTest } from "../api/detector";
 
 interface Props {
   test: ForensicTest;

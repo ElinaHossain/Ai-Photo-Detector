@@ -1,4 +1,5 @@
-import type { AnalysisResult, ForensicTest } from "../App";
+import type { AnalysisResult } from "../App";
+import type { ForensicTest } from "../api/detector";
 
 export function normalizeForensicTests(
   result: AnalysisResult

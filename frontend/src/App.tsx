@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Upload,
-  FileText,
-  Download,
-  Info,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Card } from "./components/ui/card";
 import {
@@ -21,18 +14,11 @@ import { UploadZone } from "./components/UploadZone";
 import { ResultsDashboard } from "./components/ResultsDashboard";
 import { HowToGuide } from "./components/HowToGuide";
 import { exportToPDF } from "./utils/pdfExport";
-import { detectImage, type ELAMetadata } from "./api/detector";
-
-/* =======================
-   NEW FORENSIC TYPE
-======================= */
-export interface ForensicTest {
-  test_name: string;
-  score: number;
-  confidence: number;
-  verdict: "clean" | "suspicious" | "inconclusive";
-  details: Record<string, unknown>;
-}
+import {
+  detectImage,
+  type ELAMetadata,
+  type ForensicTest,
+} from "./api/detector";
 
 /* =======================
    MAIN RESULT TYPE

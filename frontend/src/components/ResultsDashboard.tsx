@@ -2,13 +2,7 @@ import { AnalysisResult } from "../App";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import {
-  CheckCircle,
-  AlertTriangle,
-  XCircle,
-  Calendar,
-  Flame,
-} from "lucide-react";
+import { Calendar, Flame } from "lucide-react";
 import ForensicTestCard from "./ForensicTestCard";
 import { normalizeForensicTests } from "../utils/forensicNormalizer";
 
@@ -19,7 +13,6 @@ interface ResultsDashboardProps {
 }
 
 export function ResultsDashboard({
-  results,
   selectedResult,
 }: ResultsDashboardProps) {
   const apiBaseUrl =
@@ -150,7 +143,7 @@ export function ResultsDashboard({
                     {selectedResult.ela.score.toFixed(1)}%
                   </span>
                 </div>
-                <gress value={selectedResult.ela.score} />
+                <Progress value={selectedResult.ela.score} />
               </div>
 
               <p className="text-sm">
