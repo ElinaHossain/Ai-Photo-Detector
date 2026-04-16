@@ -140,11 +140,12 @@ export function ResultsDashboard({
           return (
             <Card
               key={item.label}
-              className="p-4"
               style={{
                 ...panelStyle,
-                minHeight: "116px",
+                minHeight: "108px",
+                padding: "1rem",
                 justifyContent: "space-between",
+                gap: "0.75rem",
               }}
             >
               <div className="flex items-center justify-between gap-3">
@@ -163,9 +164,10 @@ export function ResultsDashboard({
                 <p
                   style={{
                     color: "#1f2937",
-                    fontSize: "1.55rem",
+                    fontSize: item.value.length > 10 ? "1.2rem" : "1.45rem",
                     fontWeight: 700,
                     lineHeight: 1.1,
+                    overflowWrap: "anywhere",
                   }}
                 >
                   {item.value}
@@ -174,9 +176,10 @@ export function ResultsDashboard({
                   style={{
                     color: "#655080",
                     fontSize: "0.84rem",
+                    display: "-webkit-box",
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: "vertical",
                     overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
                   }}
                 >
                   {item.detail}
@@ -195,8 +198,8 @@ export function ResultsDashboard({
           alignItems: "stretch",
         }}
       >
-        <Card className="p-5" style={panelStyle}>
-          <div className="flex items-center justify-between gap-3 mb-4">
+        <Card style={{ ...panelStyle, padding: "1.25rem" }}>
+          <div className="flex items-center justify-between gap-3" style={{ marginBottom: "1rem" }}>
             <div>
               <h3
                 className="font-semibold text-gray-900"
@@ -236,7 +239,7 @@ export function ResultsDashboard({
           </div>
         </Card>
 
-        <Card className="p-5" style={panelStyle}>
+        <Card style={{ ...panelStyle, padding: "1.25rem" }}>
           <h3
             className="font-semibold text-gray-900 mb-2"
             style={{ fontSize: "1.05rem" }}
@@ -298,7 +301,7 @@ export function ResultsDashboard({
       </div>
 
       <Card className="p-5" style={panelStyle}>
-        <div className="flex items-center justify-between gap-3 mb-4">
+        <div className="flex items-start justify-between gap-3" style={{ marginBottom: "1rem" }}>
           <div>
             <h3
               className="font-semibold text-gray-900"
@@ -334,9 +337,9 @@ export function ResultsDashboard({
       </Card>
 
       {selectedResult.ela && (
-        <Card className="p-5" style={panelStyle}>
-          <div className="flex items-center gap-2 mb-4">
-            <Flame className="w-5 h-5" />
+        <Card style={{ ...panelStyle, padding: "1.25rem" }}>
+          <div className="flex items-start gap-2" style={{ marginBottom: "1rem" }}>
+            <Flame className="w-5 h-5" style={{ flexShrink: 0, marginTop: "0.15rem" }} />
             <div>
               <h3
                 className="font-semibold text-gray-900"
@@ -355,7 +358,7 @@ export function ResultsDashboard({
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
               gap: "1.25rem",
-              alignItems: "center",
+              alignItems: "start",
             }}
           >
             <div className="flex justify-center">
@@ -431,7 +434,7 @@ export function ResultsDashboard({
         </Card>
       )}
 
-      <Card className="p-5 bg-purple-100" style={panelStyle}>
+      <Card className="bg-purple-100" style={{ ...panelStyle, padding: "1.25rem" }}>
         <h3 style={{ fontSize: "1.05rem" }}>Analysis Summary</h3>
         <p className="text-gray-700" style={{ fontSize: "0.92rem" }}>
           The overall confidence score of{" "}

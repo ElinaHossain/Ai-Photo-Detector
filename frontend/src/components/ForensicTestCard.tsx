@@ -108,28 +108,39 @@ export default function ForensicTestCard({ test }: Props) {
 
   return (
     <Card
-      className="p-4 bg-white/80 border border-[#8d70b3]/20"
+      className="bg-white/80 border border-[#8d70b3]/20"
       style={{
         width: "100%",
         minWidth: 0,
-        minHeight: "156px",
+        minHeight: "168px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        gap: "0.625rem",
+        gap: "0.75rem",
+        padding: "1rem",
         borderRadius: "16px",
         boxShadow: "0 8px 22px rgba(61, 48, 77, 0.1)",
         overflow: "hidden",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "0.75rem",
+          alignItems: "start",
+          minHeight: "2.5rem",
+        }}
+      >
         <div className="flex items-start gap-2 min-w-0">
-          {getIcon(test.verdict)}
+          <span style={{ flexShrink: 0, marginTop: "0.1rem" }}>
+            {getIcon(test.verdict)}
+          </span>
           <span
             className="font-medium text-gray-900"
             style={{
-              fontSize: "0.92rem",
-              lineHeight: 1.25,
+              fontSize: "0.9rem",
+              lineHeight: 1.2,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -143,6 +154,11 @@ export default function ForensicTestCard({ test }: Props) {
         <Badge
           variant="outline"
           className={`text-xs border shrink-0 ${getVerdictColor(test.verdict)}`}
+          style={{
+            maxWidth: "7rem",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
         >
           {test.verdict}
         </Badge>
@@ -151,10 +167,12 @@ export default function ForensicTestCard({ test }: Props) {
       <div className="space-y-2">
         <div
           className="flex items-center justify-between"
-          style={{ fontSize: "0.82rem" }}
+          style={{ fontSize: "0.84rem", gap: "0.75rem" }}
         >
           <span className="text-gray-600">Score</span>
-          <span className="text-gray-900">{(test.score * 100).toFixed(1)}%</span>
+          <span className="text-gray-900" style={{ flexShrink: 0 }}>
+            {(test.score * 100).toFixed(1)}%
+          </span>
         </div>
         <Progress value={test.score * 100} className="h-1.5" />
       </div>
@@ -191,25 +209,33 @@ export default function ForensicTestCard({ test }: Props) {
       {(regions.length > 0 || metricEntries.length > 0) && (
         <div
           className="space-y-1 pt-2 border-t border-[#8d70b3]/20"
-          style={{ marginTop: "auto" }}
+          style={{ marginTop: "auto", minWidth: 0 }}
         >
           {regions.length > 0 && (
             <div
               className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem" }}
+              style={{ fontSize: "0.82rem", alignItems: "center" }}
             >
-              <span className="text-gray-500">Highlighted Regions</span>
-              <span className="text-gray-900">{regions.length}</span>
+              <span className="text-gray-500" style={{ minWidth: 0 }}>
+                Highlighted Regions
+              </span>
+              <span className="text-gray-900" style={{ flexShrink: 0 }}>
+                {regions.length}
+              </span>
             </div>
           )}
 
           {artifactMap && (
             <div
               className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem" }}
+              style={{ fontSize: "0.82rem", alignItems: "center" }}
             >
-              <span className="text-gray-500">Evidence Map</span>
-              <span className="text-gray-900">Available</span>
+              <span className="text-gray-500" style={{ minWidth: 0 }}>
+                Evidence Map
+              </span>
+              <span className="text-gray-900" style={{ flexShrink: 0 }}>
+                Available
+              </span>
             </div>
           )}
 
@@ -217,10 +243,12 @@ export default function ForensicTestCard({ test }: Props) {
             <div
               key={key}
               className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem" }}
+              style={{ fontSize: "0.82rem", alignItems: "center" }}
             >
-              <span className="text-gray-500">{formatDetailKey(key)}</span>
-              <span className="text-gray-900 text-right">
+              <span className="text-gray-500" style={{ minWidth: 0 }}>
+                {formatDetailKey(key)}
+              </span>
+              <span className="text-gray-900 text-right" style={{ flexShrink: 0 }}>
                 {formatDetailValue(value)}
               </span>
             </div>
