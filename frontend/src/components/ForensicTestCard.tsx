@@ -85,31 +85,45 @@ export default function ForensicTestCard({ test }: Props) {
   const detailsEntries = Object.entries(details).filter(
     ([key, value]) =>
       value !== "" &&
-      !["artifact_map", "regions", "metrics"].includes(key)
+      ![
+        "artifact_map",
+        "block_inconsistency_score",
+        "regions",
+        "metrics",
+      ].includes(key)
   );
   const metricEntries = metrics
     ? Object.entries(metrics).filter(
-        ([, value]) =>
+        ([key, value]) =>
           ["string", "number", "boolean"].includes(typeof value) &&
-          value !== ""
+          value !== "" &&
+          ![
+            "analyzed_blocks",
+            "block_inconsistency_score",
+            "raw_block_inconsistency_score",
+            "request_id",
+          ].includes(key)
       )
     : [];
 
   return (
     <Card
-      className="p-4 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
+      className="p-3 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
       style={{
-        minHeight: "360px",
-        height: "100%",
+        width: "240px",
+        minWidth: "240px",
+        height: "248px",
         display: "flex",
         flexDirection: "column",
+        gap: "0.75rem",
+        overflow: "hidden",
       }}
     >
-      <div className="flex items-center justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2 min-w-0">
           {getIcon(test.verdict)}
           <span
-            className="font-medium text-gray-900"
+            className="font-medium text-gray-900 text-sm"
             style={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -123,14 +137,14 @@ export default function ForensicTestCard({ test }: Props) {
 
         <Badge
           variant="outline"
-          className={`text-xs border ${getVerdictColor(test.verdict)}`}
+          className={`text-xs border shrink-0 ${getVerdictColor(test.verdict)}`}
         >
           {test.verdict}
         </Badge>
       </div>
 
-      <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between text-sm">
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
           <span className="text-gray-600">Score</span>
           <span className="text-gray-900">{(test.score * 100).toFixed(1)}%</span>
         </div>
@@ -138,13 +152,13 @@ export default function ForensicTestCard({ test }: Props) {
       </div>
 
       {artifactMap && (
-        <div className="mb-3">
+        <div>
           <img
             src={artifactMap.url}
             alt={`${test.test_name} artifact map`}
             className="w-full rounded border bg-black"
             style={{
-              height: "150px",
+              height: "88px",
               objectFit: "contain",
             }}
           />
@@ -152,15 +166,15 @@ export default function ForensicTestCard({ test }: Props) {
       )}
 
       {detailsEntries.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-[#8d70b3]/20">
+        <div className="space-y-1 pt-2 border-t border-[#8d70b3]/20">
           {detailsEntries.map(([key, value]) => (
-            <div key={key} className="text-sm">
+            <div key={key} className="text-xs">
               {key === "explanation" && value ? (
                 <p
-                  className="text-sm text-gray-600 leading-relaxed mt-1"
+                  className="text-xs text-gray-600"
                   style={{
                     display: "-webkit-box",
-                    WebkitLineClamp: 3,
+                    WebkitLineClamp: artifactMap ? 2 : 4,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -181,16 +195,19 @@ export default function ForensicTestCard({ test }: Props) {
       )}
 
       {(regions.length > 0 || metricEntries.length > 0) && (
-        <div className="space-y-2 pt-2 mt-2 border-t border-[#8d70b3]/20">
+        <div
+          className="space-y-1 pt-2 border-t border-[#8d70b3]/20"
+          style={{ marginTop: "auto" }}
+        >
           {regions.length > 0 && (
-            <div className="flex justify-between gap-3 text-sm">
+            <div className="flex justify-between gap-3 text-xs">
               <span className="text-gray-500">Highlighted Regions</span>
               <span className="text-gray-900">{regions.length}</span>
             </div>
           )}
 
-          {metricEntries.slice(0, 4).map(([key, value]) => (
-            <div key={key} className="flex justify-between gap-3 text-sm">
+          {metricEntries.slice(0, artifactMap ? 2 : 3).map(([key, value]) => (
+            <div key={key} className="flex justify-between gap-3 text-xs">
               <span className="text-gray-500">{formatDetailKey(key)}</span>
               <span className="text-gray-900 text-right">
                 {formatDetailValue(value)}

@@ -103,10 +103,10 @@ export function ResultsDashboard({
           <p>No forensic test results available.</p>
         ) : (
           <div
-            className="grid gap-4"
+            className="flex gap-4"
             style={{
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-              gridAutoRows: "1fr",
+              overflowX: "auto",
+              paddingBottom: "0.25rem",
             }}
           >
             {forensicTests.map((test, index) => (
