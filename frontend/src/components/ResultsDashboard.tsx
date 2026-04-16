@@ -124,6 +124,8 @@ export function ResultsDashboard({
         margin: "0 auto",
         display: "grid",
         gap: "1.25rem",
+        fontSize: "0.95rem",
+        lineHeight: 1.4,
       }}
     >
       <div
@@ -147,18 +149,21 @@ export function ResultsDashboard({
             >
               <div className="flex items-center justify-between gap-3">
                 <span
-                  className="text-xs"
-                  style={{ color: "#655080", fontWeight: 600 }}
+                  style={{
+                    color: "#655080",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                  }}
                 >
                   {item.label}
                 </span>
-                <Icon className="w-4 h-4 text-[#655080]" />
+                <Icon className="w-5 h-5 text-[#655080]" />
               </div>
               <div>
                 <p
                   style={{
                     color: "#1f2937",
-                    fontSize: "1.6rem",
+                    fontSize: "1.55rem",
                     fontWeight: 700,
                     lineHeight: 1.1,
                   }}
@@ -166,9 +171,9 @@ export function ResultsDashboard({
                   {item.value}
                 </p>
                 <p
-                  className="text-xs"
                   style={{
                     color: "#655080",
+                    fontSize: "0.84rem",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",
@@ -193,8 +198,16 @@ export function ResultsDashboard({
         <Card className="p-5" style={panelStyle}>
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h3 className="font-semibold text-gray-900">Source Image</h3>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
+              <h3
+                className="font-semibold text-gray-900"
+                style={{ fontSize: "1.05rem" }}
+              >
+                Source Image
+              </h3>
+              <div
+                className="flex items-center gap-2 text-gray-500"
+                style={{ fontSize: "0.88rem" }}
+              >
                 <Calendar className="w-4 h-4" />
                 {selectedResult.uploadDate.toLocaleString()}
               </div>
@@ -224,14 +237,22 @@ export function ResultsDashboard({
         </Card>
 
         <Card className="p-5" style={panelStyle}>
-          <h3 className="font-semibold text-gray-900 mb-2">Result Summary</h3>
-          <p className="text-sm text-gray-600 mb-5">
+          <h3
+            className="font-semibold text-gray-900 mb-2"
+            style={{ fontSize: "1.05rem" }}
+          >
+            Result Summary
+          </h3>
+          <p className="text-gray-600 mb-5" style={{ fontSize: "0.92rem" }}>
             This report combines the model score with forensic checks and visual evidence maps.
           </p>
 
           <div className="space-y-4">
             <div style={mutedPanelStyle} className="p-4">
-              <div className="flex justify-between text-sm">
+              <div
+                className="flex justify-between"
+                style={{ fontSize: "0.9rem" }}
+              >
                 <span>Overall Confidence</span>
                 <span>{selectedResult.confidence.toFixed(1)}%</span>
               </div>
@@ -240,7 +261,10 @@ export function ResultsDashboard({
 
             {typeof elaScore === "number" && (
               <div style={mutedPanelStyle} className="p-4">
-                <div className="flex justify-between text-sm">
+                <div
+                  className="flex justify-between"
+                  style={{ fontSize: "0.9rem" }}
+                >
                   <span>ELA Score</span>
                   <span>{elaScore.toFixed(1)}%</span>
                 </div>
@@ -249,13 +273,14 @@ export function ResultsDashboard({
             )}
 
             <div
+              className="p-4"
               style={{
                 ...mutedPanelStyle,
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
                 gap: "0.75rem",
+                fontSize: "0.9rem",
               }}
-              className="p-4 text-sm"
             >
               <div>
                 <p className="text-gray-500">File</p>
@@ -275,10 +300,13 @@ export function ResultsDashboard({
       <Card className="p-5" style={panelStyle}>
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="font-semibold text-gray-900">
+            <h3
+              className="font-semibold text-gray-900"
+              style={{ fontSize: "1.05rem" }}
+            >
               Forensic Test Results
             </h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
               Compression, consistency, and pattern checks.
             </p>
           </div>
@@ -310,8 +338,13 @@ export function ResultsDashboard({
           <div className="flex items-center gap-2 mb-4">
             <Flame className="w-5 h-5" />
             <div>
-              <h3 className="font-semibold text-gray-900">ELA Heatmap</h3>
-              <p className="text-sm text-gray-600">
+              <h3
+                className="font-semibold text-gray-900"
+                style={{ fontSize: "1.05rem" }}
+              >
+                ELA Heatmap
+              </h3>
+              <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
                 Error level response mapped over the image.
               </p>
             </div>
@@ -347,14 +380,17 @@ export function ResultsDashboard({
 
             <div className="space-y-4">
               <div style={mutedPanelStyle} className="p-4">
-                <div className="flex justify-between text-sm">
+                <div
+                  className="flex justify-between"
+                  style={{ fontSize: "0.9rem" }}
+                >
                   <span>ELA Score</span>
                   <span>{selectedResult.ela.score.toFixed(1)}%</span>
                 </div>
                 <Progress value={selectedResult.ela.score} className="mt-2" />
               </div>
 
-              <p className="text-sm text-gray-700">
+              <p className="text-gray-700" style={{ fontSize: "0.92rem" }}>
                 {selectedResult.ela.explanation}
               </p>
 
@@ -366,7 +402,10 @@ export function ResultsDashboard({
                     gap: "0.75rem",
                   }}
                 >
-                  <div style={mutedPanelStyle} className="p-3 text-sm">
+                  <div
+                    style={{ ...mutedPanelStyle, fontSize: "0.9rem" }}
+                    className="p-3"
+                  >
                     <p className="text-gray-500">Mean Intensity</p>
                     <p className="text-gray-900">
                       {formatPercentMetric(
@@ -374,7 +413,10 @@ export function ResultsDashboard({
                       )}
                     </p>
                   </div>
-                  <div style={mutedPanelStyle} className="p-3 text-sm">
+                  <div
+                    style={{ ...mutedPanelStyle, fontSize: "0.9rem" }}
+                    className="p-3"
+                  >
                     <p className="text-gray-500">Hotspot Ratio</p>
                     <p className="text-gray-900">
                       {formatRatioMetric(
@@ -390,8 +432,8 @@ export function ResultsDashboard({
       )}
 
       <Card className="p-5 bg-purple-100" style={panelStyle}>
-        <h3>Analysis Summary</h3>
-        <p className="text-sm text-gray-700">
+        <h3 style={{ fontSize: "1.05rem" }}>Analysis Summary</h3>
+        <p className="text-gray-700" style={{ fontSize: "0.92rem" }}>
           The overall confidence score of{" "}
           {selectedResult.confidence.toFixed(1)}% suggests that it is{" "}
           {selectedResult.isAIGenerated

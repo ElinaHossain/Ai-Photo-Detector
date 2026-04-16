@@ -112,7 +112,7 @@ export default function ForensicTestCard({ test }: Props) {
       style={{
         width: "100%",
         minWidth: 0,
-        minHeight: "142px",
+        minHeight: "156px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
@@ -126,8 +126,10 @@ export default function ForensicTestCard({ test }: Props) {
         <div className="flex items-start gap-2 min-w-0">
           {getIcon(test.verdict)}
           <span
-            className="font-medium text-gray-900 text-sm"
+            className="font-medium text-gray-900"
             style={{
+              fontSize: "0.92rem",
+              lineHeight: 1.25,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -147,7 +149,10 @@ export default function ForensicTestCard({ test }: Props) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
+        <div
+          className="flex items-center justify-between"
+          style={{ fontSize: "0.82rem" }}
+        >
           <span className="text-gray-600">Score</span>
           <span className="text-gray-900">{(test.score * 100).toFixed(1)}%</span>
         </div>
@@ -157,10 +162,10 @@ export default function ForensicTestCard({ test }: Props) {
       {detailsEntries.length > 0 && (
         <div className="space-y-1">
           {detailsEntries.slice(0, 1).map(([key, value]) => (
-            <div key={key} className="text-xs">
+            <div key={key} style={{ fontSize: "0.82rem" }}>
               {key === "explanation" && value ? (
                 <p
-                  className="text-xs text-gray-600"
+                  className="text-gray-600"
                   style={{
                     display: "-webkit-box",
                     WebkitLineClamp: 2,
@@ -189,21 +194,31 @@ export default function ForensicTestCard({ test }: Props) {
           style={{ marginTop: "auto" }}
         >
           {regions.length > 0 && (
-            <div className="flex justify-between gap-3 text-xs">
+            <div
+              className="flex justify-between gap-3"
+              style={{ fontSize: "0.82rem" }}
+            >
               <span className="text-gray-500">Highlighted Regions</span>
               <span className="text-gray-900">{regions.length}</span>
             </div>
           )}
 
           {artifactMap && (
-            <div className="flex justify-between gap-3 text-xs">
+            <div
+              className="flex justify-between gap-3"
+              style={{ fontSize: "0.82rem" }}
+            >
               <span className="text-gray-500">Evidence Map</span>
               <span className="text-gray-900">Available</span>
             </div>
           )}
 
           {metricEntries.slice(0, artifactMap ? 1 : 2).map(([key, value]) => (
-            <div key={key} className="flex justify-between gap-3 text-xs">
+            <div
+              key={key}
+              className="flex justify-between gap-3"
+              style={{ fontSize: "0.82rem" }}
+            >
               <span className="text-gray-500">{formatDetailKey(key)}</span>
               <span className="text-gray-900 text-right">
                 {formatDetailValue(value)}
