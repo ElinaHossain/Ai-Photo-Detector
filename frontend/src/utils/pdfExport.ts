@@ -49,11 +49,13 @@ function getArtifactMapUrl(details: DetailRecord) {
   return typeof artifactMap?.url === "string" ? artifactMap.url : null;
 }
 
-function getCompressionArtifactTest(result: AnalysisResult) {
-  return result.forensic_tests?.find((test) => {
-    const name = test.test_name.toLowerCase();
-    return name.includes("compression") && name.includes("artifact");
-  });
+function getForensicArtifactMaps(result: AnalysisResult) {
+  return (result.forensic_tests ?? [])
+    .map((test) => {
+      const url = getArtifactMapUrl(test.details || {});
+      return url ? { title: `${test.test_name} Map`, url } : null;
+    })
+    .filter((entry): entry is { title: string; url: string } => entry !== null);
 }
 
 function imageFormatFromDataUrl(dataUrl: string) {
@@ -164,7 +166,7 @@ export function exportToPDF(result: AnalysisResult) {
 
   yPosition = sectionTitle(pdf, "Detection Result", yPosition);
 
-  const resultText = result.isAIGenerated ? "AI Generated" : "Real Photo";
+  const resultText = result.isAIGenerated ? "AI Generated" : "Low AI Signal";
   const resultColor: PdfColor = result.isAIGenerated ? [220, 38, 38] : [22, 163, 74];
 
   pdf.setFillColor(...resultColor);
@@ -186,6 +188,74 @@ export function exportToPDF(result: AnalysisResult) {
   pdf.setFillColor(59, 130, 246);
   pdf.rect(PAGE_MARGIN, yPosition - 3, (barWidth * result.confidence) / 100, barHeight, "F");
   yPosition += 15;
+
+  if (result.modelEvidence) {
+    yPosition = sectionTitle(pdf, "Model Evidence", yPosition);
+    pdf.setFontSize(10);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(`Provider: ${result.modelEvidence.provider ?? "Unknown"}`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    pdf.text(`Raw AI Probability: ${result.modelEvidence.rawAiProbability.toFixed(1)}%`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    pdf.text(`Provider Verdict: ${result.modelEvidence.providerVerdict ?? "Not supplied"}`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    pdf.text(`Threshold: ${result.modelEvidence.threshold.toFixed(1)}%`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    pdf.text(`Fallback Used: ${result.modelEvidence.usedFallback ? "Yes" : "No"}`, PAGE_MARGIN, yPosition);
+    yPosition += 9;
+    yPosition = writeWrappedText(
+      pdf,
+      result.modelEvidence.explanation,
+      PAGE_MARGIN,
+      yPosition,
+      pageWidth - PAGE_MARGIN * 2,
+      5
+    ) + 5;
+  }
+
+  if (result.reliability) {
+    yPosition = sectionTitle(pdf, "Result Reliability", yPosition);
+    pdf.setFontSize(10);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(`${result.reliability.label}: ${result.reliability.score.toFixed(1)}%`, PAGE_MARGIN, yPosition);
+    yPosition += 8;
+    yPosition = writeWrappedText(
+      pdf,
+      result.reliability.explanation,
+      PAGE_MARGIN,
+      yPosition,
+      pageWidth - PAGE_MARGIN * 2,
+      5
+    ) + 4;
+    result.reliability.factors.slice(0, 4).forEach((factor) => {
+      yPosition = ensureSpace(pdf, yPosition, 8);
+      pdf.text(`- ${factor}`, PAGE_MARGIN, yPosition);
+      yPosition += 6;
+    });
+    yPosition += 5;
+  }
+
+  if (result.robustness) {
+    yPosition = sectionTitle(pdf, "Robustness / Stability Check", yPosition);
+    pdf.setFontSize(10);
+    pdf.setTextColor(75, 85, 99);
+    pdf.text(`Status: ${result.robustness.label}`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    pdf.text(`Consistency Index: ${(result.robustness.score * 100).toFixed(0)}/100`, PAGE_MARGIN, yPosition);
+    yPosition += 7;
+    if (typeof result.robustness.spread === "number") {
+      pdf.text(`Raw AI Score Spread: ${result.robustness.spread.toFixed(1)}%`, PAGE_MARGIN, yPosition);
+      yPosition += 7;
+    }
+    yPosition = writeWrappedText(
+      pdf,
+      result.robustness.explanation,
+      PAGE_MARGIN,
+      yPosition,
+      pageWidth - PAGE_MARGIN * 2,
+      5
+    ) + 5;
+  }
 
   if (result.forensic_tests?.length) {
     yPosition = sectionTitle(pdf, "Forensic Evidence", yPosition);
@@ -222,28 +292,32 @@ export function exportToPDF(result: AnalysisResult) {
     });
   }
 
-  const compressionTest = getCompressionArtifactTest(result);
-  const compressionDetails = compressionTest?.details || {};
-  const compressionArtifactMapUrl = getArtifactMapUrl(compressionDetails);
-  if (compressionArtifactMapUrl) {
+  const forensicArtifactMaps = getForensicArtifactMaps(result);
+  forensicArtifactMaps.forEach((artifactMap) => {
     yPosition = addDataUrlImage(
       pdf,
-      "Compression Artifact Map",
-      compressionArtifactMapUrl,
+      artifactMap.title,
+      artifactMap.url,
       yPosition,
       pageWidth
     );
-  }
+  });
 
+  const hasElaForensicMap = forensicArtifactMaps.some((artifactMap) => {
+    const title = artifactMap.title.toLowerCase();
+    return title.includes("error level") || title.includes("ela");
+  });
   const elaHeatmapUrl = result.ela?.heatmap?.url;
-  if (elaHeatmapUrl) {
+  if (elaHeatmapUrl && !hasElaForensicMap) {
     yPosition = addDataUrlImage(pdf, "ELA Heatmap", elaHeatmapUrl, yPosition, pageWidth);
   }
 
   yPosition = sectionTitle(pdf, "Analysis Summary", yPosition);
   pdf.setFontSize(10);
   pdf.setTextColor(75, 85, 99);
-  const summaryText = `The model score and local forensic checks suggest this image is ${result.isAIGenerated ? "likely AI-generated" : "likely real"}. Forensic maps highlight compression or recompression evidence when available. These results are assistive signals, not proof on their own.`;
+  const summaryText = result.isAIGenerated
+    ? "The model score and supporting evidence checks suggest this image is likely AI-generated. Forensic maps highlight edit, clone, compression, or noise evidence when available. These results are assistive signals, not proof on their own."
+    : "The model did not strongly flag this image as AI-generated. Clean forensic checks do not prove camera origin, and AI generation is still possible when metadata or watermarks are absent.";
   yPosition = writeWrappedText(
     pdf,
     summaryText,

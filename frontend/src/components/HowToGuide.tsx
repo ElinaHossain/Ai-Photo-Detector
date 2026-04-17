@@ -16,29 +16,29 @@ export function HowToGuide() {
     {
       icon: CheckCircle,
       title: "Analyze Your Photos",
-      description: "Once you've selected your images, click the 'Analyze Images' button. Our AI detection system will process each image and check multiple indicators to determine if it was AI-generated.",
+      description: "Once you've selected your images, click the 'Analyze Images' button. The detector returns an overall AI model score and supporting evidence checks.",
       tips: [
         "Analysis typically takes 2-3 seconds per image",
-        "The system checks pixel consistency, noise patterns, and more",
+        "Forensic checks look for metadata, edit hotspots, clone regions, and compression or texture artifacts",
         "Each image receives a confidence score from 0-100%"
       ]
     },
     {
       icon: FileText,
       title: "Review Results",
-      description: "Switch to the Results tab to see detailed analysis for your uploaded image. The report includes individual indicator scores and a comprehensive summary.",
+      description: "Switch to the Results tab to see detailed analysis for your uploaded image. The report separates the AI model score from supporting forensic checks.",
       tips: [
         "View confidence scores and detection status",
-        "Check individual indicators like edge detection and color distribution",
+        "Review provenance, watermark, and manipulation evidence separately",
         "Read the detailed analysis summary"
       ]
     },
     {
       icon: Download,
       title: "Export PDF Report",
-      description: "Click the 'Export PDF Report' button to download a comprehensive PDF document containing the analysis results, confidence scores, and all detection indicators.",
+      description: "Click the 'Export PDF Report' button to download a comprehensive PDF document containing the analysis result, model score, and supporting evidence checks.",
       tips: [
-        "PDF includes all detection indicators and scores",
+        "PDF includes forensic evidence summaries and maps",
         "Contains image preview and file information",
         "Perfect for documentation and sharing results"
       ]
@@ -100,10 +100,10 @@ export function HowToGuide() {
             </p>
           </div>
           <div>
-            <p className="text-gray-900 mb-1">Detection Indicators</p>
+            <p className="text-gray-900 mb-1">Supporting Evidence Checks</p>
             <p className="text-gray-700">
-              Individual tests that examine different aspects of the image, such as pixel patterns,
-              noise characteristics, and edge consistency.
+              Separate checks look for AI provenance metadata, watermark markers, edit hotspots,
+              clone regions, compression mismatches, and local texture inconsistencies.
             </p>
           </div>
           <div>

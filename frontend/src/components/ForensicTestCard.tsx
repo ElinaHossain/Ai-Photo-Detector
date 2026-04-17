@@ -31,7 +31,85 @@ function isCompressionTest(testName: string) {
   return normalized.includes("compression") || normalized.includes("artifact");
 }
 
+function isNoiseTextureTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("noise") || normalized.includes("texture");
+}
+
+function isCopyMoveTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return (
+    normalized.includes("copy-move") ||
+    normalized.includes("copy move") ||
+    normalized.includes("clone")
+  );
+}
+
+function isProvenanceTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("provenance") || normalized.includes("watermark");
+}
+
+function isFrequencyFingerprintTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("frequency fingerprint");
+}
+
+function isDiffusionReconstructionTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("diffusion") || normalized.includes("reconstruction");
+}
+
+function isSemanticConsistencyTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("semantic");
+}
+
 function getVerdictLabel(testName: string, verdict: string) {
+  if (isProvenanceTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no provenance found";
+      case "suspicious":
+        return "AI provenance found";
+      default:
+        return "metadata inconclusive";
+    }
+  }
+
+  if (isFrequencyFingerprintTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no spectral fingerprint";
+      case "suspicious":
+        return "AI spectral pattern";
+      default:
+        return "review spectrum";
+    }
+  }
+
+  if (isDiffusionReconstructionTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no reconstruction signal";
+      case "suspicious":
+        return "reconstruction signal";
+      default:
+        return "review reconstruction";
+    }
+  }
+
+  if (isSemanticConsistencyTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no semantic anomaly";
+      case "suspicious":
+        return "semantic anomaly";
+      default:
+        return "review semantics";
+    }
+  }
+
   if (isElaTest(testName)) {
     switch (verdict) {
       case "clean":
@@ -40,6 +118,28 @@ function getVerdictLabel(testName: string, verdict: string) {
         return "edit hotspots";
       default:
         return "review hotspots";
+    }
+  }
+
+  if (isCopyMoveTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no clone match";
+      case "suspicious":
+        return "clone match";
+      default:
+        return "review clone";
+    }
+  }
+
+  if (isNoiseTextureTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "consistent noise";
+      case "suspicious":
+        return "noise mismatch";
+      default:
+        return "review texture";
     }
   }
 
@@ -65,7 +165,13 @@ function getVerdictLabel(testName: string, verdict: string) {
 }
 
 function getScoreLabel(testName: string) {
+  if (isProvenanceTest(testName)) return "Provenance signal";
+  if (isFrequencyFingerprintTest(testName)) return "Frequency fingerprint";
+  if (isDiffusionReconstructionTest(testName)) return "Reconstruction signal";
+  if (isSemanticConsistencyTest(testName)) return "Semantic signal";
   if (isElaTest(testName)) return "ELA signal";
+  if (isCopyMoveTest(testName)) return "Clone signal";
+  if (isNoiseTextureTest(testName)) return "Noise/texture signal";
   if (isCompressionTest(testName)) return "Compression signal";
   return "Forensic signal";
 }
@@ -138,6 +244,14 @@ export default function ForensicTestCard({ test }: Props) {
         "artifact_map",
         "ela_score",
         "block_inconsistency_score",
+        "noise_variance_score",
+        "clone_score",
+        "provenance_score",
+        "frequency_fingerprint_score",
+        "diffusion_reconstruction_score",
+        "semantic_consistency_score",
+        "clone_pairs",
+        "indicators",
         "regions",
         "metrics",
       ].includes(key)
@@ -150,7 +264,18 @@ export default function ForensicTestCard({ test }: Props) {
           ![
             "analyzed_blocks",
             "block_inconsistency_score",
+            "noise_variance_score",
+            "clone_score",
+            "provenance_score",
+            "frequency_fingerprint_score",
+            "diffusion_reconstruction_score",
+            "semantic_consistency_score",
             "raw_block_inconsistency_score",
+            "raw_noise_variance_score",
+            "raw_clone_score",
+            "raw_frequency_fingerprint_score",
+            "raw_diffusion_reconstruction_score",
+            "raw_semantic_consistency_score",
             "raw_ela_score",
             "request_id",
           ].includes(key)

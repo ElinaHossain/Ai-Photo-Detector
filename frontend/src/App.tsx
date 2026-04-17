@@ -18,6 +18,9 @@ import {
   detectImage,
   type ELAMetadata,
   type ForensicTest,
+  type ModelEvidence,
+  type ResultReliability,
+  type RobustnessCheck,
 } from "./api/detector";
 
 /* =======================
@@ -39,6 +42,9 @@ export interface AnalysisResult {
   }[];
 
   forensic_tests?: ForensicTest[];
+  modelEvidence?: ModelEvidence;
+  robustness?: RobustnessCheck;
+  reliability?: ResultReliability;
 
   imageUrl: string;
   ela?: ELAMetadata;
@@ -101,6 +107,9 @@ export default function App() {
           indicators: response.indicators,
 
           forensic_tests: response.forensic_tests,
+          modelEvidence: response.metadata?.modelEvidence,
+          robustness: response.metadata?.robustness,
+          reliability: response.metadata?.reliability,
 
           imageUrl: previewUrl,
           ela: response.metadata?.ela,

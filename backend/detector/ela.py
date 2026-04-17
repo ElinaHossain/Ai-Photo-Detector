@@ -302,10 +302,19 @@ def _explanation(
     if verdict == "inconclusive":
         return "ELA shows moderate local variation. The signal is not strong enough on its own."
     if localized_peak_delta >= 1.0:
-        return "ELA found small local differences, but the pattern is consistent with normal compression or texture."
+        return (
+            "ELA found small local differences, but the pattern is consistent with normal compression or texture. "
+            "AI generation is still possible."
+        )
     if hotspot_ratio_pct >= 5.0 or p95_intensity >= 40.0 or block_variation >= 18.0:
-        return "ELA differences are present but limited, which is more consistent with ordinary compression changes."
-    return "ELA response is diffuse and low intensity, which is typical of uniformly compressed images."
+        return (
+            "ELA differences are present but limited, which is more consistent with ordinary compression changes. "
+            "AI generation is still possible."
+        )
+    return (
+        "ELA response is diffuse and low intensity, which is typical of uniformly compressed images. "
+        "AI generation is still possible."
+    )
 
 
 def analyze_ela(*, image_bytes: bytes, request_id: str) -> ElaAnalysis:
