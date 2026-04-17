@@ -9,10 +9,12 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageOps
 
 
-TEST_NAME = "JPEG Compression Artifact Analysis"
+TEST_NAME = "Compression Artifact Analysis"
 BLOCK_SIZE = 8
 MAX_ANALYSIS_DIMENSION = 768
 SUSPICIOUS_REGION_LIMIT = 6
+MIN_REGION_AREA_RATIO = 0.0025
+MIN_REGION_AVERAGE_SCORE = 0.78
 
 
 @dataclass(frozen=True)
@@ -188,12 +190,18 @@ def _connected_regions(mask: np.ndarray, block_scores: np.ndarray) -> list[dict[
             min_row, max_row = min(cell_rows), max(cell_rows)
             min_col, max_col = min(cell_cols), max(cell_cols)
             region_score = float(np.mean([block_scores[row, col] for row, col in cells]))
+            region_width = (max_col - min_col + 1) / cols
+            region_height = (max_row - min_row + 1) / rows
+            region_area = region_width * region_height
+            if region_area < MIN_REGION_AREA_RATIO or region_score < MIN_REGION_AVERAGE_SCORE:
+                continue
+
             regions.append(
                 {
                     "x": round(min_col / cols, 4),
                     "y": round(min_row / rows, 4),
-                    "width": round((max_col - min_col + 1) / cols, 4),
-                    "height": round((max_row - min_row + 1) / rows, 4),
+                    "width": round(region_width, 4),
+                    "height": round(region_height, 4),
                     "score": round(_clamp(region_score, 0.0, 1.0), 4),
                 }
             )
@@ -232,29 +240,116 @@ def _build_artifact_map(original: Image.Image, block_map: np.ndarray, analysis_s
     return ArtifactMap(data_url=f"data:{media_type};base64,{encoded}", media_type=media_type)
 
 
-def _explanation(score: float, region_variation: float, suspicious_ratio: float, *, source_is_jpeg: bool) -> str:
+def _has_localized_recompression_evidence(
+    *,
+    raw_score: float,
+    source_is_jpeg: bool,
+    strongest_region_delta: float,
+    boundary_grid_strength: float,
+) -> bool:
     if not source_is_jpeg:
-        if score >= 0.25:
-            return (
-                "The source file is not JPEG, so this result is lower-confidence. "
-                "Highlighted areas show JPEG-like block or DCT texture inconsistencies, "
-                "but they should be treated as inconclusive evidence."
-            )
-        return "The source file is not JPEG, so JPEG compression artifact evidence is limited."
-
-    if score >= 0.5:
         return (
-            "JPEG artifact analysis found localized 8x8 block and DCT energy inconsistencies, "
+            raw_score >= 0.68
+            and strongest_region_delta >= 0.32
+            and boundary_grid_strength >= 0.16
+        )
+
+    strong_score_with_support = raw_score >= 0.72 and (
+        strongest_region_delta >= 0.24 or boundary_grid_strength >= 0.14
+    )
+    localized_grid_mismatch = (
+        raw_score >= 0.48
+        and strongest_region_delta >= 0.28
+        and boundary_grid_strength >= 0.12
+    )
+    return strong_score_with_support or localized_grid_mismatch
+
+
+def _has_borderline_recompression_evidence(
+    *,
+    raw_score: float,
+    source_is_jpeg: bool,
+    strongest_region_delta: float,
+    boundary_grid_strength: float,
+) -> bool:
+    if not source_is_jpeg:
+        return raw_score >= 0.62 and (
+            strongest_region_delta >= 0.22 or boundary_grid_strength >= 0.1
+        )
+
+    return raw_score >= 0.62 and (
+        strongest_region_delta >= 0.18 or boundary_grid_strength >= 0.08
+    )
+
+
+def _verdict_for_metrics(
+    *,
+    raw_score: float,
+    source_is_jpeg: bool,
+    strongest_region_delta: float,
+    boundary_grid_strength: float,
+) -> str:
+    if _has_localized_recompression_evidence(
+        raw_score=raw_score,
+        source_is_jpeg=source_is_jpeg,
+        strongest_region_delta=strongest_region_delta,
+        boundary_grid_strength=boundary_grid_strength,
+    ):
+        return "suspicious"
+    if _has_borderline_recompression_evidence(
+        raw_score=raw_score,
+        source_is_jpeg=source_is_jpeg,
+        strongest_region_delta=strongest_region_delta,
+        boundary_grid_strength=boundary_grid_strength,
+    ):
+        return "inconclusive"
+    return "clean"
+
+
+def _display_score_for_verdict(raw_score: float, *, source_is_jpeg: bool, verdict: str) -> float:
+    if verdict == "suspicious":
+        return raw_score if source_is_jpeg else round(_clamp(raw_score * 0.85, 0.48, 0.72), 4)
+    if verdict == "inconclusive":
+        multiplier = 0.62 if source_is_jpeg else 0.5
+        return round(_clamp(raw_score * multiplier, 0.25, 0.42), 4)
+    multiplier = 0.38 if source_is_jpeg else 0.32
+    return round(_clamp(raw_score * multiplier, 0.0, 0.24), 4)
+
+
+def _explanation(
+    score: float,
+    region_variation: float,
+    suspicious_ratio: float,
+    *,
+    source_is_jpeg: bool,
+    verdict: str,
+) -> str:
+    if not source_is_jpeg:
+        if verdict == "suspicious":
+            return (
+                "Compression artifact analysis found localized block and frequency inconsistencies. "
+                "Because the source is not JPEG, treat this as supporting evidence rather than proof."
+            )
+        if verdict == "inconclusive":
+            return (
+                "Compression artifact analysis found some block-like variation. "
+                "Because the source is not JPEG, the signal is lower-confidence."
+            )
+        return "No compression mismatch found. AI generation is still possible."
+
+    if verdict == "suspicious":
+        return (
+            "Compression artifact analysis found localized 8x8 block and DCT energy inconsistencies, "
             "which can indicate pasted or recompressed regions."
         )
     if score >= 0.25:
         return (
-            "JPEG artifact analysis found moderate regional compression variation. "
+            "Compression artifact analysis found moderate regional variation. "
             "The signal is visible but not strong enough on its own."
         )
     if region_variation > 0.3 or suspicious_ratio > 0.08:
-        return "JPEG artifact variation is present but weak, which can happen after ordinary resizing or saving."
-    return "JPEG compression artifacts are broadly consistent across the image."
+        return "Compression artifact variation is weak and consistent with normal camera processing, resizing, or saving."
+    return "No compression mismatch found. AI generation is still possible."
 
 
 def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: str) -> JPEGArtifactAnalysis:
@@ -302,14 +397,20 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
     )
 
     source_is_jpeg = mime_type == "image/jpeg" and image_bytes.startswith(b"\xff\xd8\xff")
-    score = raw_score if source_is_jpeg else round(raw_score * 0.55, 4)
+    verdict = _verdict_for_metrics(
+        raw_score=raw_score,
+        source_is_jpeg=source_is_jpeg,
+        strongest_region_delta=strongest_region_delta,
+        boundary_grid_strength=boundary_grid_strength,
+    )
+    score = _display_score_for_verdict(raw_score, source_is_jpeg=source_is_jpeg, verdict=verdict)
     confidence = round(
-        _clamp(0.52 + (score * 0.42) + (0.06 if source_is_jpeg else -0.08), 0.0, 1.0),
+        _clamp(0.58 + (score * 0.35) + (0.07 if source_is_jpeg else -0.08), 0.0, 1.0),
         4,
     )
-    verdict = "suspicious" if source_is_jpeg and score >= 0.5 else "inconclusive" if score >= 0.25 else "clean"
 
-    regions = _connected_regions(suspicious_mask, normalized_block_scores)
+    candidate_regions = _connected_regions(suspicious_mask, normalized_block_scores)
+    regions = candidate_regions if verdict == "suspicious" else []
     artifact_map = _build_artifact_map(
         analysis_image,
         normalized_block_scores,
@@ -318,6 +419,7 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
 
     metrics: dict[str, float | bool | str] = {
         "source_is_jpeg": source_is_jpeg,
+        "source_format": mime_type.replace("image/", "").upper(),
         "block_inconsistency_score": score,
         "raw_block_inconsistency_score": raw_score,
         "regional_variation": round(region_variation, 4),
@@ -325,6 +427,7 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
         "dct_energy_variation": round(dct_variation, 4),
         "block_grid_strength": round(boundary_grid_strength, 4),
         "suspicious_block_ratio": round(suspicious_ratio, 4),
+        "localized_recompression_evidence": verdict == "suspicious",
         "analyzed_blocks": float(normalized_block_scores.size),
         "request_id": request_id,
     }
@@ -333,7 +436,13 @@ def analyze_jpeg_artifacts(*, image_bytes: bytes, mime_type: str, request_id: st
         score=score,
         confidence=confidence,
         verdict=verdict,
-        explanation=_explanation(score, region_variation, suspicious_ratio, source_is_jpeg=source_is_jpeg),
+        explanation=_explanation(
+            score,
+            region_variation,
+            suspicious_ratio,
+            source_is_jpeg=source_is_jpeg,
+            verdict=verdict,
+        ),
         metrics=metrics,
         artifact_map=artifact_map,
         regions=regions,

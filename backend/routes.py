@@ -155,6 +155,11 @@ async def detect_image(file: UploadFile | None = File(default=None)):
             if prediction.model_name == "bitmind_api" and provider_is_ai is not None
             else postprocessed.isAIGenerated
         )
+        response_confidence = (
+            float(prediction.raw_scores.get("provider_confidence", postprocessed.confidence))
+            if prediction.model_name == "bitmind_api" and provider_is_ai is not None
+            else postprocessed.confidence
+        )
 
         ela_metadata = None
         ela_payload = preprocess_result.metadata.get("ela", {})
@@ -170,7 +175,7 @@ async def detect_image(file: UploadFile | None = File(default=None)):
 
         response = DetectionResponse(
             isAIGenerated=final_is_ai,
-            confidence=postprocessed.confidence,
+            confidence=response_confidence,
             indicators=postprocessed.indicators,
             forensic_tests=list(preprocess_result.metadata.get("forensic_tests", [])),
             metadata=DetectionMetadata(

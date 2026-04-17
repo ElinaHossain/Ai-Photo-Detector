@@ -3,9 +3,10 @@ import math
 
 import numpy as np
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFilter
 
-from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts
+from backend.detector.ela import analyze_ela, _verdict_for_metrics as _ela_verdict_for_metrics
+from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts, _verdict_for_metrics
 from backend.detector.postprocess import _status_for_value, postprocess_prediction
 from backend.detector.predict import ModelUnavailableError, PredictionOutput, predict_scores
 from backend.detector.preprocess import preprocess_image
@@ -64,7 +65,8 @@ class TestPreprocessImage:
         assert heatmap["mediaType"] == "image/png"
         assert heatmap["url"].startswith("data:image/png;base64,")
         assert "artifact" not in result.metadata["ela"]
-        assert result.metadata["forensic_tests"][0]["test_name"] == "JPEG Compression Artifact Analysis"
+        test_names = [test["test_name"] for test in result.metadata["forensic_tests"]]
+        assert test_names == ["Error Level Analysis", "Compression Artifact Analysis"]
 
 
 class TestJPEGArtifactAnalysis:
@@ -113,6 +115,169 @@ class TestJPEGArtifactAnalysis:
         assert edited.artifact_map.data_url.startswith("data:image/png;base64,")
         assert edited.regions
 
+    def test_moderate_score_without_grid_mismatch_is_clean(self):
+        verdict = _verdict_for_metrics(
+            raw_score=0.57,
+            source_is_jpeg=True,
+            strongest_region_delta=0.18,
+            boundary_grid_strength=0.04,
+        )
+
+        assert verdict == "clean"
+
+    def test_borderline_score_with_partial_support_is_inconclusive(self):
+        verdict = _verdict_for_metrics(
+            raw_score=0.65,
+            source_is_jpeg=True,
+            strongest_region_delta=0.2,
+            boundary_grid_strength=0.04,
+        )
+
+        assert verdict == "inconclusive"
+
+    def test_localized_grid_mismatch_remains_suspicious(self):
+        verdict = _verdict_for_metrics(
+            raw_score=0.51,
+            source_is_jpeg=True,
+            strongest_region_delta=0.31,
+            boundary_grid_strength=0.21,
+        )
+
+        assert verdict == "suspicious"
+
+    def test_non_jpeg_can_still_report_strong_compression_evidence(self):
+        verdict = _verdict_for_metrics(
+            raw_score=0.72,
+            source_is_jpeg=False,
+            strongest_region_delta=0.35,
+            boundary_grid_strength=0.18,
+        )
+
+        assert verdict == "suspicious"
+
+
+class TestElaAnalysis:
+    @staticmethod
+    def _jpeg_bytes(image: Image.Image, *, quality: int) -> bytes:
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=quality, subsampling=0)
+        return buffer.getvalue()
+
+    @staticmethod
+    def _photo_like_image(size: tuple[int, int] = (256, 256)) -> Image.Image:
+        width, height = size
+        rng = np.random.default_rng(11)
+        y_coords, x_coords = np.mgrid[0:height, 0:width]
+        red = 70 + x_coords * 0.42 + rng.normal(0, 5, (height, width))
+        green = 84 + y_coords * 0.36 + rng.normal(0, 5, (height, width))
+        blue = 112 + (x_coords + y_coords) * 0.16 + rng.normal(0, 5, (height, width))
+        pixels = np.stack([red, green, blue], axis=2)
+        return Image.fromarray(np.clip(pixels, 0, 255).astype("uint8"), "RGB").filter(
+            ImageFilter.GaussianBlur(0.7)
+        )
+
+    def test_pasted_smooth_object_scores_above_clean_baseline(self):
+        base_image = self._photo_like_image()
+        clean_bytes = self._jpeg_bytes(base_image, quality=85)
+
+        edited = Image.open(io.BytesIO(clean_bytes)).convert("RGB")
+        patch = Image.new("RGB", (74, 64), (235, 235, 245))
+        draw = ImageDraw.Draw(patch)
+        draw.ellipse((8, 8, 66, 56), fill=(30, 120, 230))
+        draw.rectangle((28, 18, 48, 48), fill=(250, 60, 60))
+        edited.paste(patch, (78, 72))
+        edited_bytes = self._jpeg_bytes(edited, quality=85)
+
+        clean = analyze_ela(image_bytes=clean_bytes, request_id="clean")
+        pasted = analyze_ela(image_bytes=edited_bytes, request_id="pasted")
+
+        assert pasted.score > clean.score + 25.0
+        assert pasted.verdict == "suspicious"
+        assert pasted.to_forensic_test()["test_name"] == "Error Level Analysis"
+        assert pasted.to_forensic_test()["details"]["artifact_map"]["url"].startswith("data:image/png;base64,")
+
+    def test_moderate_ela_score_without_hotspot_support_stays_clean(self):
+        verdict = _ela_verdict_for_metrics(
+            score=32.2,
+            localized_peak_delta=0.62,
+            localized_max_delta=1.1,
+            localized_hotspot_ratio=0.0,
+            smooth_peak_delta=0.2,
+            smooth_max_delta=0.5,
+            smooth_localized_hotspot_ratio=0.0,
+            hotspot_ratio_pct=0.0,
+        )
+
+        assert verdict == "clean"
+
+    def test_moderate_ela_score_with_hotspot_support_is_inconclusive(self):
+        verdict = _ela_verdict_for_metrics(
+            score=48.0,
+            localized_peak_delta=0.95,
+            localized_max_delta=1.4,
+            localized_hotspot_ratio=0.0,
+            smooth_peak_delta=0.98,
+            smooth_max_delta=1.4,
+            smooth_localized_hotspot_ratio=0.3,
+            hotspot_ratio_pct=0.0,
+        )
+
+        assert verdict == "inconclusive"
+
+    def test_textured_hotspots_without_smooth_support_stay_clean(self):
+        verdict = _ela_verdict_for_metrics(
+            score=79.7,
+            localized_peak_delta=1.4,
+            localized_max_delta=3.2,
+            localized_hotspot_ratio=2.5,
+            smooth_peak_delta=0.2,
+            smooth_max_delta=0.4,
+            smooth_localized_hotspot_ratio=0.0,
+            hotspot_ratio_pct=0.0,
+        )
+
+        assert verdict == "clean"
+
+    def test_high_texture_outdoor_scene_stays_clean(self):
+        rng = np.random.default_rng(23)
+        width, height = 256, 256
+        y_coords, x_coords = np.mgrid[0:height, 0:width]
+        base = np.stack(
+            [
+                80 + x_coords * 0.18 + rng.normal(0, 18, (height, width)),
+                95 + y_coords * 0.16 + rng.normal(0, 18, (height, width)),
+                110 + (x_coords + y_coords) * 0.08 + rng.normal(0, 18, (height, width)),
+            ],
+            axis=2,
+        )
+        image = Image.fromarray(np.clip(base, 0, 255).astype("uint8"), "RGB").filter(
+            ImageFilter.GaussianBlur(0.35)
+        )
+        draw = ImageDraw.Draw(image)
+        for _ in range(35):
+            draw.line(
+                (
+                    int(rng.integers(0, width)),
+                    int(rng.integers(0, height)),
+                    int(rng.integers(0, width)),
+                    int(rng.integers(0, height)),
+                ),
+                fill=(20, 30, 25),
+                width=int(rng.integers(1, 3)),
+            )
+        for _ in range(120):
+            draw.point(
+                (int(rng.integers(0, width)), int(rng.integers(0, height))),
+                fill=(245, 245, 230),
+            )
+
+        analysis = analyze_ela(
+            image_bytes=self._jpeg_bytes(image, quality=86),
+            request_id="natural-texture",
+        )
+
+        assert analysis.verdict == "clean"
+
 
 class TestPredictScores:
     def test_returns_prediction_contract_from_provider(self, monkeypatch):
@@ -156,6 +321,27 @@ class TestPredictScores:
         )
 
         assert result.ai_probability == 100.0
+
+    def test_provider_real_verdict_with_high_score_becomes_low_ai_probability(self, monkeypatch):
+        class Response:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"is_ai": False, "score": 91.9}
+
+        monkeypatch.setenv("BITMIND_API_KEY", "test-key")
+        monkeypatch.setattr("backend.detector.predict.requests.post", lambda *args, **kwargs: Response())
+
+        result = predict_scores(
+            model_input={"entropy": 1.0},
+            metadata={"image_bytes": b"123", "mime_type": "image/png"},
+            allow_fallback=False,
+        )
+
+        assert result.ai_probability == pytest.approx(8.1)
+        assert result.raw_scores["provider_confidence"] == pytest.approx(91.9)
+        assert result.raw_scores["provider_is_ai"] is False
 
     def test_uses_fallback_when_model_is_unavailable_and_allowed(self, monkeypatch):
         monkeypatch.setenv("BITMIND_API_KEY", "test-key")

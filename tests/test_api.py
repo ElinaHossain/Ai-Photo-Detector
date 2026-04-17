@@ -103,6 +103,50 @@ def test_detect_success_returns_inline_ela_heatmap(client, sample_png_bytes, mon
     assert "artifacts" not in payload["metadata"]
 
 
+def test_detect_uses_provider_confidence_when_provider_verdict_is_real(client, sample_png_bytes, monkeypatch):
+    monkeypatch.setattr(
+        "backend.routes.preprocess_image",
+        lambda **kwargs: PreprocessOutput(
+            model_input={"entropy": 1.0, "zero_ratio": 0.5, "size_log": 1.0, "size_norm": 0.1},
+            metadata={"mime_type": "image/png", "byte_length": len(sample_png_bytes), "deterministic": False},
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.predict_scores",
+        lambda **kwargs: PredictionOutput(
+            ai_probability=8.1,
+            raw_scores={
+                "ai_probability": 8.1,
+                "provider_confidence": 91.9,
+                "provider_is_ai": False,
+            },
+            model_name="bitmind_api",
+            used_fallback=False,
+        ),
+    )
+    monkeypatch.setattr(
+        "backend.routes.postprocess_prediction",
+        lambda **kwargs: PostprocessOutput(
+            isAIGenerated=False,
+            confidence=8.1,
+            indicators=[
+                {"label": "Pixel Consistency", "value": 12.0, "status": "fail"},
+            ],
+        ),
+    )
+
+    response = client.post(
+        "/api/detect",
+        files={"file": ("sample.png", sample_png_bytes, "image/png")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["isAIGenerated"] is False
+    assert payload["confidence"] == 91.9
+    assert payload["indicators"][0]["value"] == 12.0
+
+
 def test_detect_success_returns_forensic_tests(client, sample_png_bytes, monkeypatch):
     monkeypatch.setattr(
         "backend.routes.preprocess_image",
@@ -120,7 +164,7 @@ def test_detect_success_returns_forensic_tests(client, sample_png_bytes, monkeyp
                 "deterministic": False,
                 "forensic_tests": [
                     {
-                        "test_name": "JPEG Compression Artifact Analysis",
+                        "test_name": "Compression Artifact Analysis",
                         "score": 0.72,
                         "confidence": 0.86,
                         "verdict": "suspicious",
@@ -165,7 +209,7 @@ def test_detect_success_returns_forensic_tests(client, sample_png_bytes, monkeyp
     assert response.status_code == 200
     payload = response.json()
     jpeg_test = payload["forensic_tests"][0]
-    assert jpeg_test["test_name"] == "JPEG Compression Artifact Analysis"
+    assert jpeg_test["test_name"] == "Compression Artifact Analysis"
     assert jpeg_test["score"] == 0.72
     assert jpeg_test["details"]["artifact_map"]["url"].startswith("data:image/png;base64,")
 

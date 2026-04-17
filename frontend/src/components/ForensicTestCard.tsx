@@ -21,6 +21,55 @@ function getVerdictColor(verdict: string) {
   }
 }
 
+function isElaTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("error level") || normalized.includes("ela");
+}
+
+function isCompressionTest(testName: string) {
+  const normalized = testName.toLowerCase();
+  return normalized.includes("compression") || normalized.includes("artifact");
+}
+
+function getVerdictLabel(testName: string, verdict: string) {
+  if (isElaTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no edit hotspot";
+      case "suspicious":
+        return "edit hotspots";
+      default:
+        return "review hotspots";
+    }
+  }
+
+  if (isCompressionTest(testName)) {
+    switch (verdict) {
+      case "clean":
+        return "no compression anomaly";
+      case "suspicious":
+        return "compression mismatch";
+      default:
+        return "weak signal";
+    }
+  }
+
+  switch (verdict) {
+    case "clean":
+      return "low signal";
+    case "suspicious":
+      return "suspicious";
+    default:
+      return "weak signal";
+  }
+}
+
+function getScoreLabel(testName: string) {
+  if (isElaTest(testName)) return "ELA signal";
+  if (isCompressionTest(testName)) return "Compression signal";
+  return "Forensic signal";
+}
+
 function getIcon(verdict: string) {
   switch (verdict) {
     case "clean":
@@ -87,6 +136,7 @@ export default function ForensicTestCard({ test }: Props) {
       value !== "" &&
       ![
         "artifact_map",
+        "ela_score",
         "block_inconsistency_score",
         "regions",
         "metrics",
@@ -101,6 +151,7 @@ export default function ForensicTestCard({ test }: Props) {
             "analyzed_blocks",
             "block_inconsistency_score",
             "raw_block_inconsistency_score",
+            "raw_ela_score",
             "request_id",
           ].includes(key)
       )
@@ -108,39 +159,24 @@ export default function ForensicTestCard({ test }: Props) {
 
   return (
     <Card
-      className="bg-white/80 border border-[#8d70b3]/20"
+      className="p-3 bg-white/80 border border-[#8d70b3]/20 shadow-sm"
       style={{
         width: "100%",
         minWidth: 0,
-        minHeight: "168px",
+        minHeight: "292px",
         height: "100%",
         display: "flex",
         flexDirection: "column",
         gap: "0.75rem",
-        padding: "1rem",
-        borderRadius: "16px",
-        boxShadow: "0 8px 22px rgba(61, 48, 77, 0.1)",
         overflow: "hidden",
       }}
     >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1fr) auto",
-          gap: "0.75rem",
-          alignItems: "start",
-          minHeight: "2.5rem",
-        }}
-      >
+      <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-2 min-w-0">
-          <span style={{ flexShrink: 0, marginTop: "0.1rem" }}>
-            {getIcon(test.verdict)}
-          </span>
+          {getIcon(test.verdict)}
           <span
-            className="font-medium text-gray-900"
+            className="font-medium text-gray-900 text-sm"
             style={{
-              fontSize: "0.9rem",
-              lineHeight: 1.2,
               display: "-webkit-box",
               WebkitLineClamp: 2,
               WebkitBoxOrient: "vertical",
@@ -154,39 +190,43 @@ export default function ForensicTestCard({ test }: Props) {
         <Badge
           variant="outline"
           className={`text-xs border shrink-0 ${getVerdictColor(test.verdict)}`}
-          style={{
-            maxWidth: "7rem",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
         >
-          {test.verdict}
+          {getVerdictLabel(test.test_name, test.verdict)}
         </Badge>
       </div>
 
       <div className="space-y-2">
-        <div
-          className="flex items-center justify-between"
-          style={{ fontSize: "0.84rem", gap: "0.75rem" }}
-        >
-          <span className="text-gray-600">Score</span>
-          <span className="text-gray-900" style={{ flexShrink: 0 }}>
-            {(test.score * 100).toFixed(1)}%
-          </span>
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-gray-600">{getScoreLabel(test.test_name)}</span>
+          <span className="text-gray-900">{(test.score * 100).toFixed(1)}%</span>
         </div>
         <Progress value={test.score * 100} className="h-1.5" />
       </div>
 
+      {artifactMap && (
+        <div>
+          <img
+            src={artifactMap.url}
+            alt={`${test.test_name} artifact map`}
+            className="w-full rounded border bg-black"
+            style={{
+              height: "128px",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+      )}
+
       {detailsEntries.length > 0 && (
-        <div className="space-y-1">
-          {detailsEntries.slice(0, 1).map(([key, value]) => (
-            <div key={key} style={{ fontSize: "0.82rem" }}>
+        <div className="space-y-1 pt-2 border-t border-[#8d70b3]/20">
+          {detailsEntries.map(([key, value]) => (
+            <div key={key} className="text-xs">
               {key === "explanation" && value ? (
                 <p
-                  className="text-gray-600"
+                  className="text-xs text-gray-600"
                   style={{
                     display: "-webkit-box",
-                    WebkitLineClamp: 2,
+                    WebkitLineClamp: artifactMap ? 2 : 4,
                     WebkitBoxOrient: "vertical",
                     overflow: "hidden",
                   }}
@@ -209,46 +249,19 @@ export default function ForensicTestCard({ test }: Props) {
       {(regions.length > 0 || metricEntries.length > 0) && (
         <div
           className="space-y-1 pt-2 border-t border-[#8d70b3]/20"
-          style={{ marginTop: "auto", minWidth: 0 }}
+          style={{ marginTop: "auto" }}
         >
           {regions.length > 0 && (
-            <div
-              className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem", alignItems: "center" }}
-            >
-              <span className="text-gray-500" style={{ minWidth: 0 }}>
-                Highlighted Regions
-              </span>
-              <span className="text-gray-900" style={{ flexShrink: 0 }}>
-                {regions.length}
-              </span>
+            <div className="flex justify-between gap-3 text-xs">
+              <span className="text-gray-500">Highlighted Regions</span>
+              <span className="text-gray-900">{regions.length}</span>
             </div>
           )}
 
-          {artifactMap && (
-            <div
-              className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem", alignItems: "center" }}
-            >
-              <span className="text-gray-500" style={{ minWidth: 0 }}>
-                Evidence Map
-              </span>
-              <span className="text-gray-900" style={{ flexShrink: 0 }}>
-                Available
-              </span>
-            </div>
-          )}
-
-          {metricEntries.slice(0, artifactMap ? 1 : 2).map(([key, value]) => (
-            <div
-              key={key}
-              className="flex justify-between gap-3"
-              style={{ fontSize: "0.82rem", alignItems: "center" }}
-            >
-              <span className="text-gray-500" style={{ minWidth: 0 }}>
-                {formatDetailKey(key)}
-              </span>
-              <span className="text-gray-900 text-right" style={{ flexShrink: 0 }}>
+          {metricEntries.slice(0, artifactMap ? 2 : 3).map(([key, value]) => (
+            <div key={key} className="flex justify-between gap-3 text-xs">
+              <span className="text-gray-500">{formatDetailKey(key)}</span>
+              <span className="text-gray-900 text-right">
                 {formatDetailValue(value)}
               </span>
             </div>

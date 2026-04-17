@@ -93,6 +93,7 @@ def preprocess_image(
             },
         }
         metadata["forensic_tests"] = [
+            ela_analysis.to_forensic_test(),
             jpeg_artifact_analysis.to_forensic_test(),
         ]
 

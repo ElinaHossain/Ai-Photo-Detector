@@ -3,7 +3,14 @@ import type { ReactNode } from "react";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Progress } from "./ui/progress";
-import { Calendar, CheckCircle, Flame, Gauge, Image as ImageIcon, Layers } from "lucide-react";
+import {
+  BarChart3,
+  Calendar,
+  CheckCircle,
+  Gauge,
+  Image as ImageIcon,
+  Layers,
+} from "lucide-react";
 import ForensicTestCard from "./ForensicTestCard";
 import { normalizeForensicTests } from "../utils/forensicNormalizer";
 
@@ -26,18 +33,30 @@ const mutedPanelStyle = {
   background: "rgba(245, 240, 255, 0.58)",
 };
 
-function formatPercentMetric(value?: number) {
-  return typeof value === "number" ? `${value.toFixed(2)}%` : "N/A";
-}
-
-function formatRatioMetric(value?: number) {
-  if (typeof value !== "number") return "N/A";
-  const asPercent = value <= 1 ? value * 100 : value;
-  return `${asPercent.toFixed(2)}%`;
-}
-
 function formatFileSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function getSignalLabel(status: "pass" | "warning" | "fail") {
+  switch (status) {
+    case "pass":
+      return "strong AI signal";
+    case "warning":
+      return "moderate signal";
+    default:
+      return "low signal";
+  }
+}
+
+function getSignalBadgeClass(status: "pass" | "warning" | "fail") {
+  switch (status) {
+    case "pass":
+      return "bg-rose-100 text-rose-700 border-rose-200";
+    case "warning":
+      return "bg-amber-100 text-amber-700 border-amber-200";
+    default:
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  }
 }
 
 function MediaFrame({
@@ -70,26 +89,11 @@ function MediaFrame({
 export function ResultsDashboard({
   selectedResult,
 }: ResultsDashboardProps) {
-  const apiBaseUrl =
-    (
-      import.meta as ImportMeta & {
-        env?: { VITE_API_BASE_URL?: string };
-      }
-    ).env?.VITE_API_BASE_URL?.trim() ?? "";
-  const rawHeatmapUrl = selectedResult?.ela?.heatmap?.url;
-
-  const heatmapUrl =
-    rawHeatmapUrl?.startsWith("data:")
-      ? rawHeatmapUrl
-      : apiBaseUrl && rawHeatmapUrl
-        ? new URL(rawHeatmapUrl, apiBaseUrl).toString()
-        : null;
-
   const forensicTests = normalizeForensicTests(selectedResult);
+  const evidenceCheckCount = forensicTests.length;
   const detectionLabel = selectedResult.isAIGenerated
     ? "AI Generated"
     : "Real Photo";
-  const elaScore = selectedResult.ela?.score;
   const statCards = [
     {
       label: "Detection",
@@ -104,9 +108,9 @@ export function ResultsDashboard({
       icon: Gauge,
     },
     {
-      label: "Forensic Tests",
-      value: String(forensicTests.length),
-      detail: "signals reviewed",
+      label: "Evidence Checks",
+      value: String(evidenceCheckCount),
+      detail: "forensic maps reviewed",
       icon: Layers,
     },
     {
@@ -247,7 +251,7 @@ export function ResultsDashboard({
             Result Summary
           </h3>
           <p className="text-gray-600 mb-5" style={{ fontSize: "0.92rem" }}>
-            This report combines the model score with forensic checks and visual evidence maps.
+            This report combines the model score with supporting evidence checks.
           </p>
 
           <div className="space-y-4">
@@ -261,19 +265,6 @@ export function ResultsDashboard({
               </div>
               <Progress value={selectedResult.confidence} className="mt-2" />
             </div>
-
-            {typeof elaScore === "number" && (
-              <div style={mutedPanelStyle} className="p-4">
-                <div
-                  className="flex justify-between"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  <span>ELA Score</span>
-                  <span>{elaScore.toFixed(1)}%</span>
-                </div>
-                <Progress value={elaScore} className="mt-2" />
-              </div>
-            )}
 
             <div
               className="p-4"
@@ -292,38 +283,156 @@ export function ResultsDashboard({
                 </p>
               </div>
               <div>
-                <p className="text-gray-500">Forensic checks</p>
-                <p className="text-gray-900">{forensicTests.length}</p>
+                <p className="text-gray-500">Evidence checks</p>
+                <p className="text-gray-900">{evidenceCheckCount}</p>
               </div>
             </div>
           </div>
         </Card>
       </div>
 
-      <Card className="p-5" style={panelStyle}>
-        <div className="flex items-start justify-between gap-3" style={{ marginBottom: "1rem" }}>
+      {selectedResult.indicators.length > 0 && (
+        <Card style={{ ...panelStyle, padding: "1.25rem" }}>
+          <div
+            className="flex items-start justify-between gap-3"
+            style={{ marginBottom: "1rem" }}
+          >
+            <div className="flex items-start gap-2">
+              <BarChart3
+                className="w-5 h-5 text-[#655080]"
+                style={{ flexShrink: 0, marginTop: "0.15rem" }}
+              />
+              <div>
+                <h3
+                  className="font-semibold text-gray-900"
+                  style={{ fontSize: "1.05rem" }}
+                >
+                  Model Signals
+                </h3>
+                <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
+                  Pixel, noise, edge, color, and frequency scores from the detector.
+                </p>
+              </div>
+            </div>
+            <Badge variant="secondary" style={{ flexShrink: 0 }}>
+              {selectedResult.indicators.length} signals
+            </Badge>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+              gap: "0.85rem",
+            }}
+          >
+            {selectedResult.indicators.map((indicator) => (
+              <div
+                key={indicator.label}
+                className="p-4"
+                style={{
+                  ...mutedPanelStyle,
+                  minHeight: "128px",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  gap: "0.75rem",
+                }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p
+                    className="text-gray-900"
+                    style={{
+                      fontSize: "0.92rem",
+                      fontWeight: 650,
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {indicator.label}
+                  </p>
+                  <Badge
+                    variant="outline"
+                    className={`border ${getSignalBadgeClass(indicator.status)}`}
+                    style={{ whiteSpace: "normal", textAlign: "center" }}
+                  >
+                    {getSignalLabel(indicator.status)}
+                  </Badge>
+                </div>
+
+                <div>
+                  <div
+                    className="flex justify-between"
+                    style={{ fontSize: "0.9rem" }}
+                  >
+                    <span className="text-gray-600">Signal score</span>
+                    <span className="text-gray-900">
+                      {indicator.value.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={indicator.value} className="mt-2" />
+                </div>
+
+                {indicator.explanation && (
+                  <p
+                    className="text-gray-600"
+                    style={{
+                      fontSize: "0.82rem",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {indicator.explanation}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card
+        style={{
+          ...panelStyle,
+          padding: "1.5rem",
+          gap: "1.25rem",
+        }}
+      >
+        <div
+          className="flex items-start justify-between gap-3"
+          style={{ alignItems: "flex-start" }}
+        >
           <div>
             <h3
               className="font-semibold text-gray-900"
-              style={{ fontSize: "1.05rem" }}
+              style={{ fontSize: "1.05rem", lineHeight: 1.25 }}
             >
               Forensic Test Results
             </h3>
-            <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
-              Compression, consistency, and pattern checks.
+            <p
+              className="text-gray-600"
+              style={{ fontSize: "0.92rem", lineHeight: 1.45, marginTop: "0.25rem" }}
+            >
+              Checks for edit hotspots and local compression mismatches.
             </p>
           </div>
-          <Badge variant="secondary">{forensicTests.length} checks</Badge>
+          <Badge variant="secondary" style={{ flexShrink: 0 }}>
+            {evidenceCheckCount} evidence {evidenceCheckCount === 1 ? "check" : "checks"}
+          </Badge>
         </div>
 
         {forensicTests.length === 0 ? (
-          <p>No forensic test results available.</p>
+          <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
+            No forensic evidence maps were available for this file.
+          </p>
         ) : (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 340px))",
               gap: "1rem",
+              justifyContent: "start",
             }}
           >
             {forensicTests.map((test, index) => (
@@ -335,104 +444,6 @@ export function ResultsDashboard({
           </div>
         )}
       </Card>
-
-      {selectedResult.ela && (
-        <Card style={{ ...panelStyle, padding: "1.25rem" }}>
-          <div className="flex items-start gap-2" style={{ marginBottom: "1rem" }}>
-            <Flame className="w-5 h-5" style={{ flexShrink: 0, marginTop: "0.15rem" }} />
-            <div>
-              <h3
-                className="font-semibold text-gray-900"
-                style={{ fontSize: "1.05rem" }}
-              >
-                ELA Heatmap
-              </h3>
-              <p className="text-gray-600" style={{ fontSize: "0.92rem" }}>
-                Error level response mapped over the image.
-              </p>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 360px), 1fr))",
-              gap: "1.25rem",
-              alignItems: "start",
-            }}
-          >
-            <div className="flex justify-center">
-              {heatmapUrl ? (
-                <MediaFrame maxWidth="500px">
-                  <img
-                    src={heatmapUrl}
-                    alt="ELA heatmap"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                </MediaFrame>
-              ) : (
-                <div className="h-48 flex items-center justify-center text-gray-400">
-                  Heatmap not available
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <div style={mutedPanelStyle} className="p-4">
-                <div
-                  className="flex justify-between"
-                  style={{ fontSize: "0.9rem" }}
-                >
-                  <span>ELA Score</span>
-                  <span>{selectedResult.ela.score.toFixed(1)}%</span>
-                </div>
-                <Progress value={selectedResult.ela.score} className="mt-2" />
-              </div>
-
-              <p className="text-gray-700" style={{ fontSize: "0.92rem" }}>
-                {selectedResult.ela.explanation}
-              </p>
-
-              {selectedResult.ela.metrics && (
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                    gap: "0.75rem",
-                  }}
-                >
-                  <div
-                    style={{ ...mutedPanelStyle, fontSize: "0.9rem" }}
-                    className="p-3"
-                  >
-                    <p className="text-gray-500">Mean Intensity</p>
-                    <p className="text-gray-900">
-                      {formatPercentMetric(
-                        selectedResult.ela.metrics.mean_intensity
-                      )}
-                    </p>
-                  </div>
-                  <div
-                    style={{ ...mutedPanelStyle, fontSize: "0.9rem" }}
-                    className="p-3"
-                  >
-                    <p className="text-gray-500">Hotspot Ratio</p>
-                    <p className="text-gray-900">
-                      {formatRatioMetric(
-                        selectedResult.ela.metrics.hotspot_ratio
-                      )}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </Card>
-      )}
 
       <Card className="bg-purple-100" style={{ ...panelStyle, padding: "1.25rem" }}>
         <h3 style={{ fontSize: "1.05rem" }}>Analysis Summary</h3>
