@@ -454,10 +454,7 @@ def generate_final_report(
     final_verdict = "AI-generated" if final_score >= 0.5 else "Real"
 
     # Step 4: Basic explanation (we improve later)
-    explanation = (
-        "The final decision is based on a combination of AI model output "
-        "and multiple forensic analysis signals."
-    )
+    explanation = build_explanation(api_result, forensic_summary)
 
     return {
         "api_result": api_result,
@@ -469,3 +466,45 @@ def generate_final_report(
         "explanation": explanation,
         "forensic_results": forensic_tests,
     }
+
+
+def build_explanation(
+    api_result: dict[str, Any],
+    forensic_summary: dict[str, int],
+) -> str:
+    """
+    Generate a human-readable explanation based on API result and forensic signals.
+    """
+
+    suspicious = forensic_summary["suspicious_count"]
+    total = max(1, forensic_summary["total_tests"])
+    ratio = suspicious / total
+
+    if api_result["verdict"] == "AI-generated":
+        if ratio > 0.6:
+            return (
+                "The AI model indicates a high likelihood of AI generation, "
+                "and multiple forensic analyses detected suspicious patterns, "
+                "reinforcing this conclusion."
+            )
+        elif ratio > 0.3:
+            return (
+                "The AI model suggests the image may be AI-generated, "
+                "and some forensic tests found inconsistencies that support this."
+            )
+        else:
+            return (
+                "The AI model suggests AI generation, but forensic evidence is limited, "
+                "so the result should be interpreted with caution."
+            )
+    else:
+        if ratio < 0.3:
+            return (
+                "The AI model indicates a low likelihood of AI generation, "
+                "and forensic analyses did not detect significant anomalies."
+            )
+        else:
+            return (
+                "The AI model suggests the image is real, but some forensic tests detected "
+                "inconsistencies that may require further review."
+            )
