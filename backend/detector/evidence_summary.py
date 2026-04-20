@@ -525,3 +525,39 @@ def build_explanation(
                 "The AI model suggests the image is real, but some forensic tests detected "
                 "inconsistencies that may require further review."
             )
+
+
+def generate_user_summary(report: dict[str, Any]) -> dict[str, str]:
+    """
+    Convert full report into a clean, human-readable summary for users.
+    """
+
+    final = report["final_decision"]
+    suspicious_tests = report.get("suspicious_tests", [])
+
+    confidence_percent = round(final["final_score"] * 100)
+
+    if final["final_verdict"] == "AI-generated":
+        summary = "The image is likely AI-generated based on AI analysis and forensic signals."
+    else:
+        summary = "The image is likely authentic based on AI analysis and forensic signals."
+
+    if suspicious_tests:
+        forensic_insight = "Suspicious patterns detected in: " + ", ".join(suspicious_tests)
+    else:
+        forensic_insight = "No significant forensic anomalies detected."
+
+    if confidence_percent >= 80:
+        recommendation = "High confidence result. No further review needed."
+    elif confidence_percent >= 60:
+        recommendation = "Moderate confidence. Consider additional verification."
+    else:
+        recommendation = "Low confidence. Manual review recommended."
+
+    return {
+        "Final Verdict": final["final_verdict"],
+        "Confidence": f"{confidence_percent}%",
+        "Summary": summary,
+        "Forensic Insight": forensic_insight,
+        "Recommendation": recommendation,
+    }
