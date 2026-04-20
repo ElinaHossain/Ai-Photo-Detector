@@ -25,10 +25,59 @@ export interface ELAMetadata {
   heatmap: ELAHeatmap;
 }
 
+export interface ForensicTest {
+  test_name: string;
+  score: number;
+  confidence: number;
+  verdict: "clean" | "suspicious" | "inconclusive";
+  details: Record<string, unknown>;
+}
+
+export interface ModelEvidence {
+  provider?: string;
+  rawAiProbability: number;
+  providerScore?: number | null;
+  providerVerdict?: string | null;
+  providerConfidence?: number | null;
+  threshold: number;
+  usedFallback: boolean;
+  signalStrength: "strong" | "moderate" | "weak" | "inconclusive" | string;
+  explanation: string;
+}
+
+export interface RobustnessVariant {
+  name: string;
+  aiProbability: number;
+  verdict: string;
+}
+
+export interface RobustnessCheck {
+  status: "stable" | "mixed" | "unstable" | "unavailable" | "disabled" | string;
+  label: string;
+  score: number;
+  minAiProbability?: number | null;
+  maxAiProbability?: number | null;
+  spread?: number | null;
+  variantCount: number;
+  variants: RobustnessVariant[];
+  confidenceCap?: number | null;
+  errors: string[];
+  explanation: string;
+}
+
+export interface ResultReliability {
+  level: "high" | "medium" | "low" | "inconclusive" | "conflicting" | string;
+  label: string;
+  score: number;
+  explanation: string;
+  factors: string[];
+}
+
 export interface DetectImageResponse {
   isAIGenerated: boolean;
   confidence: number;
   indicators: DetectorIndicator[];
+  forensic_tests?: ForensicTest[];
   metadata?: {
     requestId: string;
     fileName: string;
@@ -38,6 +87,9 @@ export interface DetectImageResponse {
     usedFallback?: boolean;
     deterministicSeed?: number;
     ela?: ELAMetadata;
+    modelEvidence?: ModelEvidence;
+    robustness?: RobustnessCheck;
+    reliability?: ResultReliability;
   };
 }
 

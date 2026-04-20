@@ -1,12 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Upload,
-  FileText,
-  Download,
-  Info,
-  CheckCircle,
-  AlertCircle,
-} from "lucide-react";
+import { FileText } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Card } from "./components/ui/card";
 import {
@@ -21,18 +14,14 @@ import { UploadZone } from "./components/UploadZone";
 import { ResultsDashboard } from "./components/ResultsDashboard";
 import { HowToGuide } from "./components/HowToGuide";
 import { exportToPDF } from "./utils/pdfExport";
-import { detectImage, type ELAMetadata } from "./api/detector";
-
-/* =======================
-   NEW FORENSIC TYPE
-======================= */
-export interface ForensicTest {
-  test_name: string;
-  score: number;
-  confidence: number;
-  verdict: "clean" | "suspicious" | "inconclusive";
-  details: Record<string, unknown>;
-}
+import {
+  detectImage,
+  type ELAMetadata,
+  type ForensicTest,
+  type ModelEvidence,
+  type ResultReliability,
+  type RobustnessCheck,
+} from "./api/detector";
 
 /* =======================
    MAIN RESULT TYPE
@@ -53,6 +42,9 @@ export interface AnalysisResult {
   }[];
 
   forensic_tests?: ForensicTest[];
+  modelEvidence?: ModelEvidence;
+  robustness?: RobustnessCheck;
+  reliability?: ResultReliability;
 
   imageUrl: string;
   ela?: ELAMetadata;
@@ -115,6 +107,9 @@ export default function App() {
           indicators: response.indicators,
 
           forensic_tests: response.forensic_tests,
+          modelEvidence: response.metadata?.modelEvidence,
+          robustness: response.metadata?.robustness,
+          reliability: response.metadata?.reliability,
 
           imageUrl: previewUrl,
           ela: response.metadata?.ela,
@@ -170,13 +165,20 @@ export default function App() {
     }
   };
 
+  const isResultsView = currentTab === "results";
+
   /* =======================
      UI
   ======================= */
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#b690e6] via-[#a280cc] to-[#8d70b3]">
       <header className="bg-white/80 backdrop-blur-md border-b border-[#8d70b3]/30 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between">
+        <div
+          className="mx-auto px-4 py-4 flex justify-between"
+          style={{
+            maxWidth: isResultsView ? "none" : "80rem",
+          }}
+        >
           <div className="flex gap-3 items-center">
             <div className="w-10 h-10 bg-gradient-to-br from-[#8d70b3] to-[#655080] rounded-lg flex items-center justify-center shadow-md">
               <FileText className="w-6 h-6 text-white" />
@@ -195,7 +197,13 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main
+        className="mx-auto px-4 py-8"
+        style={{
+          maxWidth: isResultsView ? "none" : "80rem",
+          width: "100%",
+        }}
+      >
         <Tabs
           value={currentTab}
           onValueChange={(v) =>
@@ -242,9 +250,18 @@ export default function App() {
           <TabsContent value="results">
             {currentResult ? (
               <>
-                <Button onClick={handleExportPDF}>
-                  Export PDF
-                </Button>
+                <div
+                  className="flex justify-between items-center"
+                  style={{
+                    margin: "1rem auto",
+                    width: "min(100%, 1320px)",
+                  }}
+                >
+                  <h2 className="text-white">Analysis Results</h2>
+                  <Button onClick={handleExportPDF}>
+                    Export PDF
+                  </Button>
+                </div>
 
                 <ResultsDashboard
                   results={[currentResult]}

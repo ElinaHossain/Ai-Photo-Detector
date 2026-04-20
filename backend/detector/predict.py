@@ -250,10 +250,26 @@ def _run_bitmind_inference(
             raise ModelUnavailableError("BitMind response did not include a usable verdict or probability.")
         found_probability = 100.0 if provider_is_ai else 0.0
 
-    ai_probability = _clamp(_to_percent(found_probability), 0.0, 100.0)
+    reported_probability = _clamp(_to_percent(found_probability), 0.0, 100.0)
+    ai_probability = reported_probability
+
+    if provider_is_ai is not None:
+        if provider_is_ai and ai_probability < 50.0:
+            ai_probability = 100.0 - ai_probability
+        elif not provider_is_ai and ai_probability > 50.0:
+            ai_probability = 100.0 - ai_probability
+
+    if provider_is_ai is None:
+        provider_confidence = ai_probability
+    elif provider_is_ai:
+        provider_confidence = ai_probability
+    else:
+        provider_confidence = 100.0 - ai_probability
+
     return {
         "ai_probability": ai_probability,
-        "provider_score": ai_probability,
+        "provider_score": reported_probability,
+        "provider_confidence": provider_confidence,
         "provider_is_ai": provider_is_ai,
     }
 

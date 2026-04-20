@@ -2,7 +2,14 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from backend.detector.copy_move import analyze_copy_move
+from backend.detector.diffusion_reconstruction import analyze_diffusion_reconstruction
 from backend.detector.ela import analyze_ela
+from backend.detector.frequency_fingerprint import analyze_frequency_fingerprint
+from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts
+from backend.detector.noise_texture import analyze_noise_texture
+from backend.detector.provenance import analyze_provenance
+from backend.detector.semantic_consistency import analyze_semantic_consistency
 
 
 # Basic magic-byte checks keep preprocessing dependency-free.
@@ -74,8 +81,45 @@ def preprocess_image(
     }
 
     if request_id:
+        provenance_analysis = analyze_provenance(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            request_id=request_id,
+        )
+        frequency_fingerprint_analysis = analyze_frequency_fingerprint(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
+        diffusion_reconstruction_analysis = analyze_diffusion_reconstruction(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
+        semantic_consistency_analysis = analyze_semantic_consistency(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
         ela_analysis = analyze_ela(image_bytes=image_bytes, request_id=request_id)
+        jpeg_artifact_analysis = analyze_jpeg_artifacts(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            request_id=request_id,
+        )
+        noise_texture_analysis = analyze_noise_texture(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
+        copy_move_analysis = analyze_copy_move(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
         model_input["ela_anomaly_score"] = ela_analysis.score
+        model_input["jpeg_compression_inconsistency_score"] = jpeg_artifact_analysis.score
+        model_input["noise_texture_inconsistency_score"] = noise_texture_analysis.score
+        model_input["copy_move_clone_score"] = copy_move_analysis.score
+        model_input["provenance_ai_score"] = provenance_analysis.score
+        model_input["frequency_fingerprint_score"] = frequency_fingerprint_analysis.score
+        model_input["diffusion_reconstruction_score"] = diffusion_reconstruction_analysis.score
+        model_input["semantic_consistency_score"] = semantic_consistency_analysis.score
         metadata["ela"] = {
             "score": ela_analysis.score,
             "explanation": ela_analysis.explanation,
@@ -85,5 +129,15 @@ def preprocess_image(
                 "mediaType": ela_analysis.heatmap.media_type,
             },
         }
+        metadata["forensic_tests"] = [
+            provenance_analysis.to_forensic_test(),
+            frequency_fingerprint_analysis.to_forensic_test(),
+            diffusion_reconstruction_analysis.to_forensic_test(),
+            semantic_consistency_analysis.to_forensic_test(),
+            ela_analysis.to_forensic_test(),
+            jpeg_artifact_analysis.to_forensic_test(),
+            noise_texture_analysis.to_forensic_test(),
+            copy_move_analysis.to_forensic_test(),
+        ]
 
     return PreprocessOutput(model_input=model_input, metadata=metadata)

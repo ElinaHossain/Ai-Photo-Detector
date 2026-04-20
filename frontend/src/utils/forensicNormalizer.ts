@@ -1,40 +1,43 @@
-import type { AnalysisResult, ForensicTest } from "../App";
+import type { AnalysisResult } from "../App";
+import type { ForensicTest } from "../api/detector";
 
 export function normalizeForensicTests(
   result: AnalysisResult
 ): ForensicTest[] {
-  // If backend already returns standardized forensic tests, use them
-  if (
-    result.forensic_tests &&
-    Array.isArray(result.forensic_tests) &&
-    result.forensic_tests.length > 0
-  ) {
-    return result.forensic_tests;
-  }
+  const tests = Array.isArray(result.forensic_tests)
+    ? [...result.forensic_tests]
+    : [];
 
-  // Otherwise convert legacy indicators into the new forensic format
-  if (result.indicators && Array.isArray(result.indicators)) {
-    return result.indicators.map((indicator) => ({
-      test_name: indicator.label,
-      score:
-        typeof indicator.value === "number"
-          ? Math.max(0, Math.min(1, indicator.value / 100))
-          : 0,
-      confidence:
-        typeof indicator.value === "number"
-          ? Math.max(0, Math.min(1, indicator.value / 100))
-          : 0,
-      verdict:
-        indicator.status === "pass"
-          ? "clean"
-          : indicator.status === "fail"
-          ? "suspicious"
-          : "inconclusive",
+  const hasElaTest = tests.some((test) => {
+    const name = test.test_name.toLowerCase();
+    return name.includes("error level") || name.includes("ela");
+  });
+
+  if (result.ela && !hasElaTest) {
+    const score = Math.max(0, Math.min(1, result.ela.score / 100));
+    const verdict: ForensicTest["verdict"] =
+      result.ela.score >= 55
+        ? "suspicious"
+        : result.ela.score >= 30
+          ? "inconclusive"
+          : "clean";
+
+    tests.unshift({
+      test_name: "Error Level Analysis",
+      score,
+      confidence: Math.max(0, Math.min(0.94, 0.54 + score * 0.4)),
+      verdict,
       details: {
-        explanation: indicator.explanation ?? "",
+        ela_score: result.ela.score,
+        explanation: result.ela.explanation,
+        metrics: result.ela.metrics,
+        artifact_map: {
+          url: result.ela.heatmap.url,
+          mediaType: "image/png",
+        },
       },
-    }));
+    });
   }
 
-  return [];
+  return tests;
 }

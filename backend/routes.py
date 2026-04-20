@@ -7,6 +7,11 @@ from typing import Any
 from fastapi import APIRouter, File, UploadFile, status
 from fastapi.responses import JSONResponse
 
+from backend.detector.evidence_summary import (
+    analyze_model_robustness,
+    assess_result_reliability,
+    build_model_evidence,
+)
 from backend.detector.postprocess import postprocess_prediction
 from backend.detector.predict import ModelUnavailableError, predict_scores
 from backend.detector.preprocess import preprocess_image
@@ -55,6 +60,20 @@ def _classification_threshold(*, used_fallback: bool) -> float:
         return float(raw)
     except ValueError as exc:
         raise ValueError(f"{env_key} must be a number.") from exc
+
+
+def _provenance_ai_override(forensic_tests: list[dict[str, Any]]) -> float | None:
+    for test in forensic_tests:
+        test_name = str(test.get("test_name", "")).lower()
+        if "provenance" not in test_name and "watermark" not in test_name:
+            continue
+        if test.get("verdict") != "suspicious":
+            continue
+
+        confidence = float(test.get("confidence", 0.0)) * 100.0
+        score = float(test.get("score", 0.0)) * 100.0
+        return max(confidence, score)
+    return None
 
 
 @router.get("/health")
@@ -149,11 +168,42 @@ async def detect_image(file: UploadFile | None = File(default=None)):
         )
         threshold = _classification_threshold(used_fallback=prediction.used_fallback)
         postprocessed = postprocess_prediction(prediction=prediction, threshold=threshold)
+        model_evidence = build_model_evidence(prediction=prediction, threshold=threshold)
         provider_is_ai = prediction.raw_scores.get("provider_is_ai")
+        forensic_tests = list(preprocess_result.metadata.get("forensic_tests", []))
+        provenance_override_confidence = _provenance_ai_override(forensic_tests)
+        allow_fallback = os.getenv("DETECTOR_DISABLE_FALLBACK", "1") != "1"
+        robustness = analyze_model_robustness(
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            base_prediction=prediction,
+            threshold=threshold,
+            predict_fn=predict_scores,
+            deterministic_seed=deterministic_seed,
+            allow_fallback=allow_fallback,
+        )
         final_is_ai = (
             bool(provider_is_ai)
             if prediction.model_name == "bitmind_api" and provider_is_ai is not None
             else postprocessed.isAIGenerated
+        )
+        response_confidence = (
+            float(prediction.raw_scores.get("provider_confidence", postprocessed.confidence))
+            if prediction.model_name == "bitmind_api" and provider_is_ai is not None
+            else postprocessed.confidence
+        )
+        if provenance_override_confidence is not None:
+            final_is_ai = True
+            response_confidence = max(response_confidence, round(provenance_override_confidence, 2))
+        elif isinstance(robustness.get("confidenceCap"), (int, float)):
+            response_confidence = min(response_confidence, float(robustness["confidenceCap"]))
+
+        reliability = assess_result_reliability(
+            model_evidence=model_evidence,
+            final_is_ai=final_is_ai,
+            response_confidence=response_confidence,
+            forensic_tests=forensic_tests,
+            robustness=robustness,
         )
 
         ela_metadata = None
@@ -170,8 +220,9 @@ async def detect_image(file: UploadFile | None = File(default=None)):
 
         response = DetectionResponse(
             isAIGenerated=final_is_ai,
-            confidence=postprocessed.confidence,
+            confidence=response_confidence,
             indicators=postprocessed.indicators,
+            forensic_tests=forensic_tests,
             metadata=DetectionMetadata(
                 requestId=request_id,
                 fileName=file.filename or "uploaded-image",
@@ -181,6 +232,9 @@ async def detect_image(file: UploadFile | None = File(default=None)):
                 usedFallback=prediction.used_fallback,
                 deterministicSeed=deterministic_seed,
                 ela=ela_metadata,
+                modelEvidence=model_evidence,
+                robustness=robustness,
+                reliability=reliability,
             ),
         )
 

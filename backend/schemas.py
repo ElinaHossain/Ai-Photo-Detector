@@ -35,6 +35,60 @@ class ELAMetadata(BaseModel):
     heatmap: ELAHeatmap
 
 
+class ModelEvidence(BaseModel):
+    provider: str | None = None
+    rawAiProbability: float = Field(..., ge=0.0, le=100.0)
+    providerScore: float | None = Field(default=None, ge=0.0, le=100.0)
+    providerVerdict: str | None = None
+    providerConfidence: float | None = Field(default=None, ge=0.0, le=100.0)
+    threshold: float = Field(..., ge=0.0, le=100.0)
+    usedFallback: bool
+    signalStrength: str
+    explanation: str
+
+
+class RobustnessVariant(BaseModel):
+    name: str
+    aiProbability: float = Field(..., ge=0.0, le=100.0)
+    verdict: str
+
+
+class RobustnessCheck(BaseModel):
+    status: str
+    label: str
+    score: float = Field(..., ge=0.0, le=1.0)
+    minAiProbability: float | None = Field(default=None, ge=0.0, le=100.0)
+    maxAiProbability: float | None = Field(default=None, ge=0.0, le=100.0)
+    spread: float | None = Field(default=None, ge=0.0, le=100.0)
+    variantCount: int = Field(..., ge=0)
+    variants: list[RobustnessVariant] = Field(default_factory=list)
+    confidenceCap: float | None = Field(default=None, ge=0.0, le=100.0)
+    errors: list[str] = Field(default_factory=list)
+    explanation: str
+
+
+class ResultReliability(BaseModel):
+    level: str
+    label: str
+    score: float = Field(..., ge=0.0, le=100.0)
+    explanation: str
+    factors: list[str] = Field(default_factory=list)
+
+
+class ForensicVerdict(str, Enum):
+    CLEAN = "clean"
+    SUSPICIOUS = "suspicious"
+    INCONCLUSIVE = "inconclusive"
+
+
+class ForensicTest(BaseModel):
+    test_name: str
+    score: float = Field(..., ge=0.0, le=1.0)
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    verdict: ForensicVerdict
+    details: dict[str, Any]
+
+
 class DetectionMetadata(BaseModel):
     requestId: str
     fileName: str
@@ -44,12 +98,16 @@ class DetectionMetadata(BaseModel):
     usedFallback: bool | None = None
     deterministicSeed: int | None = None
     ela: ELAMetadata | None = None
+    modelEvidence: ModelEvidence | None = None
+    robustness: RobustnessCheck | None = None
+    reliability: ResultReliability | None = None
 
 
 class DetectionResponse(BaseModel):
     isAIGenerated: bool
     confidence: float = Field(..., ge=0.0, le=100.0)
     indicators: list[Indicator]
+    forensic_tests: list[ForensicTest] = Field(default_factory=list)
     metadata: DetectionMetadata | None = None
 
 
