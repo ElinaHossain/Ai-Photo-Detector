@@ -10,6 +10,7 @@ from backend.detector.jpeg_artifacts import analyze_jpeg_artifacts
 from backend.detector.noise_texture import analyze_noise_texture
 from backend.detector.provenance import analyze_provenance
 from backend.detector.semantic_consistency import analyze_semantic_consistency
+from backend.detector.edge_boundary import analyze_edge_boundary
 
 
 # Basic magic-byte checks keep preprocessing dependency-free.
@@ -108,6 +109,10 @@ def preprocess_image(
             image_bytes=image_bytes,
             request_id=request_id,
         )
+        edge_boundary_analysis = analyze_edge_boundary(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
         copy_move_analysis = analyze_copy_move(
             image_bytes=image_bytes,
             request_id=request_id,
@@ -115,6 +120,7 @@ def preprocess_image(
         model_input["ela_anomaly_score"] = ela_analysis.score
         model_input["jpeg_compression_inconsistency_score"] = jpeg_artifact_analysis.score
         model_input["noise_texture_inconsistency_score"] = noise_texture_analysis.score
+        model_input["edge_boundary_inconsistency_score"] = edge_boundary_analysis.score
         model_input["copy_move_clone_score"] = copy_move_analysis.score
         model_input["provenance_ai_score"] = provenance_analysis.score
         model_input["frequency_fingerprint_score"] = frequency_fingerprint_analysis.score
@@ -137,6 +143,7 @@ def preprocess_image(
             ela_analysis.to_forensic_test(),
             jpeg_artifact_analysis.to_forensic_test(),
             noise_texture_analysis.to_forensic_test(),
+            edge_boundary_analysis.to_forensic_test(),
             copy_move_analysis.to_forensic_test(),
         ]
 
