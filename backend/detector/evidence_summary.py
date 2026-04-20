@@ -450,26 +450,39 @@ def generate_final_report(
     Combine API result and forensic analysis into a final structured report.
     """
 
-    # Step 1: API result (cleaned)
     api_result = build_api_result(prediction)
-
-    # Step 2: Forensic summary (counts)
     forensic_summary = summarize_forensic_results(forensic_tests)
     suspicious_tests = extract_suspicious_tests(forensic_tests)
 
-    # Step 3: Simple final decision logic (initial version)
-    suspicious = forensic_summary["suspicious_count"]
-    total = max(1, forensic_summary["total_tests"])
-
-    forensic_score = suspicious / total  # 0 → clean, 1 → fully suspicious
     api_score = prediction.ai_probability / 100.0
 
-    # combine (simple average for now)
-    final_score = round((api_score * 0.6) + (forensic_score * 0.4), 3)
+    weighted_score_sum = 0.0
+    weight_total = 0.0
 
+    for test in forensic_tests:
+        test_name = str(test.get("test_name", ""))
+        test_score = float(test.get("score", 0.0))
+
+        if test_name == "Semantic Consistency Analysis":
+            weight = 0.6
+        elif test_name in {
+            "Resampling / Scaling Detection",
+            "Edge & Boundary Inconsistency Detection",
+            "Error Level Analysis",
+            "AI Frequency Fingerprint Analysis",
+        }:
+            weight = 1.0
+        else:
+            weight = 0.8
+
+        weighted_score_sum += test_score * weight
+        weight_total += weight
+
+    forensic_score = weighted_score_sum / max(weight_total, 1e-8)
+
+    final_score = round((api_score * 0.65) + (forensic_score * 0.35), 3)
     final_verdict = "AI-generated" if final_score >= 0.5 else "Real"
 
-    # Step 4: Basic explanation (we improve later)
     explanation = build_explanation(api_result, forensic_summary)
 
     return {
