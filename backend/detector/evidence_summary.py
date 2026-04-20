@@ -534,6 +534,13 @@ def generate_user_summary(report: dict[str, Any]) -> dict[str, str]:
 
     final = report["final_decision"]
     suspicious_tests = report.get("suspicious_tests", [])
+    forensic_summary = report.get("forensic_summary", {})
+
+    suspicious_count = forensic_summary.get("suspicious_count", 0)
+    inconclusive_count = forensic_summary.get("inconclusive_count", 0)
+    total_tests = max(1, forensic_summary.get("total_tests", 0))
+
+    forensic_signal_strength = (suspicious_count + (0.5 * inconclusive_count)) / total_tests
 
     if final["final_verdict"] == "AI-generated":
         confidence_percent = round(final["final_score"] * 100)
@@ -541,12 +548,20 @@ def generate_user_summary(report: dict[str, Any]) -> dict[str, str]:
         confidence_percent = round((1 - final["final_score"]) * 100)
 
     if final["final_verdict"] == "AI-generated":
-        summary = "The image is likely AI-generated based on AI analysis and forensic signals."
+        if forensic_signal_strength >= 0.35:
+            summary = "The image is likely AI-generated based on AI analysis and supporting forensic signals."
+        else:
+            summary = "The image is likely AI-generated, but this decision is driven mostly by the AI model because forensic evidence is weak."
     else:
-        summary = "The image is likely authentic based on AI analysis and forensic signals."
+        if forensic_signal_strength >= 0.35:
+            summary = "The image is likely authentic, although some forensic signals suggest minor irregularities."
+        else:
+            summary = "The image is likely authentic based on AI analysis and limited forensic concern."
 
     if suspicious_tests:
         forensic_insight = "Suspicious patterns detected in: " + ", ".join(suspicious_tests)
+    elif inconclusive_count > 0:
+        forensic_insight = "No strong forensic anomalies detected, but some tests were inconclusive."
     else:
         forensic_insight = "No significant forensic anomalies detected."
 
