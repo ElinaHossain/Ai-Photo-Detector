@@ -525,17 +525,3 @@ def build_explanation(
                 "The AI model suggests the image is real, but some forensic tests detected "
                 "inconsistencies that may require further review."
             )
-
-
-def extract_suspicious_tests(forensic_tests: list[dict[str, Any]]) -> list[str]:
-    """
-    Return names of forensic tests marked as suspicious.
-    """
-
-    suspicious_tests = []
-
-    for test in forensic_tests:
-        if str(test.get("verdict", "")).lower() == "suspicious":
-            suspicious_tests.append(test.get("test_name", "unknown"))
-
-    return suspicious_tests
