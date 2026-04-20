@@ -412,3 +412,17 @@ def summarize_forensic_results(forensic_tests: list[dict[str, Any]]) -> dict[str
             summary["inconclusive_count"] += 1
 
     return summary
+
+
+def build_api_result(prediction: PredictionOutput) -> dict[str, Any]:
+    """
+    Convert raw model prediction into a clean, frontend-friendly API result.
+    """
+
+    verdict = "AI-generated" if prediction.ai_probability >= 50 else "Real"
+
+    return {
+        "verdict": verdict,
+        "confidence": round(prediction.ai_probability, 2),
+        "model": prediction.model_name,
+    }
