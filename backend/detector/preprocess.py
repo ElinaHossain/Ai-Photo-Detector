@@ -2,6 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from backend.detector.exif_metadata import analyze_exif_metadata
 from backend.detector.resampling_detection import analyze_resampling_detection
 from backend.detector.copy_move import analyze_copy_move
 from backend.detector.diffusion_reconstruction import analyze_diffusion_reconstruction
@@ -83,6 +84,10 @@ def preprocess_image(
     }
 
     if request_id:
+        exif_metadata_analysis = analyze_exif_metadata(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
         provenance_analysis = analyze_provenance(
             image_bytes=image_bytes,
             mime_type=mime_type,
@@ -122,6 +127,7 @@ def preprocess_image(
             image_bytes=image_bytes,
             request_id=request_id,
         )
+        # We do NOT add EXIF to model_input. EXIF is metadata, it should NOT influence core model scoring
         model_input["ela_anomaly_score"] = ela_analysis.score
         model_input["jpeg_compression_inconsistency_score"] = jpeg_artifact_analysis.score
         model_input["noise_texture_inconsistency_score"] = noise_texture_analysis.score
@@ -143,6 +149,7 @@ def preprocess_image(
         }
         metadata["forensic_tests"] = [
             provenance_analysis.to_forensic_test(),
+            exif_metadata_analysis.to_forensic_test(),
             frequency_fingerprint_analysis.to_forensic_test(),
             diffusion_reconstruction_analysis.to_forensic_test(),
             semantic_consistency_analysis.to_forensic_test(),
