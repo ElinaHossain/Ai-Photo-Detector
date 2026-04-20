@@ -120,8 +120,7 @@ def _high_pass(luma: np.ndarray, radius: float = 1.25) -> np.ndarray:
 
 
 def _periodicity_features(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    height, width = values.shape
-    if height < 4 or width < 4:
+    if min(values.shape) < 5:
         zeros = np.zeros_like(values, dtype=np.float64)
         return zeros, zeros
 
@@ -133,9 +132,12 @@ def _periodicity_features(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
     for shift in (2, 3, 4):
         if row_diff.shape[1] > shift:
-            row_periodicity[:, shift:] += np.abs(row_diff[:, shift:] - row_diff[:, :-shift])
+            row_delta = np.abs(row_diff[:, shift:] - row_diff[:, :-shift])
+            row_periodicity[:, shift + 1:] += row_delta
+
         if col_diff.shape[0] > shift:
-            col_periodicity[shift:, :] += np.abs(col_diff[shift:, :] - col_diff[:-shift, :])
+            col_delta = np.abs(col_diff[shift:, :] - col_diff[:-shift, :])
+            col_periodicity[shift + 1:, :] += col_delta
 
     return row_periodicity, col_periodicity
 
