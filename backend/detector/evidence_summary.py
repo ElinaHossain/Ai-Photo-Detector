@@ -427,6 +427,21 @@ def build_api_result(prediction: PredictionOutput) -> dict[str, Any]:
         "model": prediction.model_name,
     }
 
+
+def extract_suspicious_tests(forensic_tests: list[dict[str, Any]]) -> list[str]:
+    """
+    Return names of forensic tests marked as suspicious.
+    """
+
+    suspicious_tests = []
+
+    for test in forensic_tests:
+        if str(test.get("verdict", "")).lower() == "suspicious":
+            suspicious_tests.append(test.get("test_name", "unknown"))
+
+    return suspicious_tests
+    
+
 def generate_final_report(
     prediction: PredictionOutput,
     forensic_tests: list[dict[str, Any]],
@@ -440,6 +455,7 @@ def generate_final_report(
 
     # Step 2: Forensic summary (counts)
     forensic_summary = summarize_forensic_results(forensic_tests)
+    suspicious_tests = extract_suspicious_tests(forensic_tests)
 
     # Step 3: Simple final decision logic (initial version)
     suspicious = forensic_summary["suspicious_count"]
@@ -464,6 +480,7 @@ def generate_final_report(
             "final_verdict": final_verdict,
         },
         "explanation": explanation,
+        "suspicious_tests": suspicious_tests,
         "forensic_results": forensic_tests,
     }
 
@@ -508,3 +525,17 @@ def build_explanation(
                 "The AI model suggests the image is real, but some forensic tests detected "
                 "inconsistencies that may require further review."
             )
+
+
+def extract_suspicious_tests(forensic_tests: list[dict[str, Any]]) -> list[str]:
+    """
+    Return names of forensic tests marked as suspicious.
+    """
+
+    suspicious_tests = []
+
+    for test in forensic_tests:
+        if str(test.get("verdict", "")).lower() == "suspicious":
+            suspicious_tests.append(test.get("test_name", "unknown"))
+
+    return suspicious_tests
