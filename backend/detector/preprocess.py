@@ -2,6 +2,7 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
+from backend.detector.resampling_detection import analyze_resampling_detection
 from backend.detector.copy_move import analyze_copy_move
 from backend.detector.diffusion_reconstruction import analyze_diffusion_reconstruction
 from backend.detector.ela import analyze_ela
@@ -109,6 +110,10 @@ def preprocess_image(
             image_bytes=image_bytes,
             request_id=request_id,
         )
+        resampling_detection_analysis = analyze_resampling_detection(
+            image_bytes=image_bytes,
+            request_id=request_id,
+        )
         edge_boundary_analysis = analyze_edge_boundary(
             image_bytes=image_bytes,
             request_id=request_id,
@@ -120,6 +125,7 @@ def preprocess_image(
         model_input["ela_anomaly_score"] = ela_analysis.score
         model_input["jpeg_compression_inconsistency_score"] = jpeg_artifact_analysis.score
         model_input["noise_texture_inconsistency_score"] = noise_texture_analysis.score
+        model_input["resampling_scaling_score"] = resampling_detection_analysis.score
         model_input["edge_boundary_inconsistency_score"] = edge_boundary_analysis.score
         model_input["copy_move_clone_score"] = copy_move_analysis.score
         model_input["provenance_ai_score"] = provenance_analysis.score
@@ -143,6 +149,7 @@ def preprocess_image(
             ela_analysis.to_forensic_test(),
             jpeg_artifact_analysis.to_forensic_test(),
             noise_texture_analysis.to_forensic_test(),
+            resampling_detection_analysis.to_forensic_test(),
             edge_boundary_analysis.to_forensic_test(),
             copy_move_analysis.to_forensic_test(),
         ]
