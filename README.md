@@ -156,8 +156,6 @@ Optional environment variables:
 .
 ├── frontend/        # Runnable web UI
 ├── backend/         # FastAPI service and detector pipeline
-├── model/           # Model config/artifacts
-├── scripts/         # Utility scripts
 └── tests/           # Test files and API validation scripts
 ```
 
