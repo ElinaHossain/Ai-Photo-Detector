@@ -386,3 +386,29 @@ def assess_result_reliability(
         "explanation": explanation,
         "factors": factors[:5],
     }
+
+def summarize_forensic_results(forensic_tests: list[dict[str, Any]]) -> dict[str, int]:
+    """
+    Simple aggregation of forensic test verdicts.
+    Works with ANY number of tests.
+    """
+
+    summary = {
+        "total_tests": 0,
+        "suspicious_count": 0,
+        "clean_count": 0,
+        "inconclusive_count": 0,
+    }
+
+    for test in forensic_tests:
+        verdict = str(test.get("verdict", "")).lower().strip()
+        summary["total_tests"] += 1
+
+        if verdict == "suspicious":
+            summary["suspicious_count"] += 1
+        elif verdict == "clean":
+            summary["clean_count"] += 1
+        else:
+            summary["inconclusive_count"] += 1
+
+    return summary
