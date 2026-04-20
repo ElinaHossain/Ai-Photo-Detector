@@ -535,7 +535,10 @@ def generate_user_summary(report: dict[str, Any]) -> dict[str, str]:
     final = report["final_decision"]
     suspicious_tests = report.get("suspicious_tests", [])
 
-    confidence_percent = round(final["final_score"] * 100)
+    if final["final_verdict"] == "AI-generated":
+        confidence_percent = round(final["final_score"] * 100)
+    else:
+        confidence_percent = round((1 - final["final_score"]) * 100)
 
     if final["final_verdict"] == "AI-generated":
         summary = "The image is likely AI-generated based on AI analysis and forensic signals."
