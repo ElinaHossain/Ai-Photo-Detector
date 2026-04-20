@@ -426,3 +426,46 @@ def build_api_result(prediction: PredictionOutput) -> dict[str, Any]:
         "confidence": round(prediction.ai_probability, 2),
         "model": prediction.model_name,
     }
+
+def generate_final_report(
+    prediction: PredictionOutput,
+    forensic_tests: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Combine API result and forensic analysis into a final structured report.
+    """
+
+    # Step 1: API result (cleaned)
+    api_result = build_api_result(prediction)
+
+    # Step 2: Forensic summary (counts)
+    forensic_summary = summarize_forensic_results(forensic_tests)
+
+    # Step 3: Simple final decision logic (initial version)
+    suspicious = forensic_summary["suspicious_count"]
+    total = max(1, forensic_summary["total_tests"])
+
+    forensic_score = suspicious / total  # 0 → clean, 1 → fully suspicious
+    api_score = prediction.ai_probability / 100.0
+
+    # combine (simple average for now)
+    final_score = round((api_score * 0.6) + (forensic_score * 0.4), 3)
+
+    final_verdict = "AI-generated" if final_score >= 0.5 else "Real"
+
+    # Step 4: Basic explanation (we improve later)
+    explanation = (
+        "The final decision is based on a combination of AI model output "
+        "and multiple forensic analysis signals."
+    )
+
+    return {
+        "api_result": api_result,
+        "forensic_summary": forensic_summary,
+        "final_decision": {
+            "final_score": final_score,
+            "final_verdict": final_verdict,
+        },
+        "explanation": explanation,
+        "forensic_results": forensic_tests,
+    }
