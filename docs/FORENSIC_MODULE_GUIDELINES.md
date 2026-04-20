@@ -85,7 +85,6 @@ Spelling and punctuation matter.
 - `EXIF Metadata Analysis`
 - `Error Level Analysis (ELA)`
 - `JPEG Compression Artifact Analysis`
-- `Lighting & Shadow Consistency Analysis`
 - `Copy–Move (Clone) Detection`
 - `Noise Pattern / Texture Consistency Analysis`
 - `Edge & Boundary Inconsistency Detection`
@@ -176,14 +175,6 @@ Use the following templates as a **minimum requirement**. You may add additional
 ```python
 "details": {
     "block_inconsistency_score": float
-}
-```
-
-### Lighting & Shadow Consistency Analysis
-
-```python
-"details": {
-    "light_direction_variance": float
 }
 ```
 
