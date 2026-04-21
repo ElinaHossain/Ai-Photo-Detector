@@ -386,3 +386,209 @@ def assess_result_reliability(
         "explanation": explanation,
         "factors": factors[:5],
     }
+
+def summarize_forensic_results(forensic_tests: list[dict[str, Any]]) -> dict[str, int]:
+    """
+    Simple aggregation of forensic test verdicts.
+    Works with ANY number of tests.
+    """
+
+    summary = {
+        "total_tests": 0,
+        "suspicious_count": 0,
+        "clean_count": 0,
+        "inconclusive_count": 0,
+    }
+
+    for test in forensic_tests:
+        verdict = str(test.get("verdict", "")).lower().strip()
+        summary["total_tests"] += 1
+
+        if verdict == "suspicious":
+            summary["suspicious_count"] += 1
+        elif verdict == "clean":
+            summary["clean_count"] += 1
+        else:
+            summary["inconclusive_count"] += 1
+
+    return summary
+
+
+def build_api_result(prediction: PredictionOutput) -> dict[str, Any]:
+    """
+    Convert raw model prediction into a clean, frontend-friendly API result.
+    """
+
+    verdict = "AI-generated" if prediction.ai_probability >= 50 else "Real"
+
+    return {
+        "verdict": verdict,
+        "confidence": round(prediction.ai_probability, 2),
+        "model": prediction.model_name,
+    }
+
+
+def extract_suspicious_tests(forensic_tests: list[dict[str, Any]]) -> list[str]:
+    """
+    Return names of forensic tests marked as suspicious.
+    """
+
+    suspicious_tests = []
+
+    for test in forensic_tests:
+        if str(test.get("verdict", "")).lower() == "suspicious":
+            suspicious_tests.append(test.get("test_name", "unknown"))
+
+    return suspicious_tests
+    
+
+def generate_final_report(
+    prediction: PredictionOutput,
+    forensic_tests: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """
+    Combine API result and forensic analysis into a final structured report.
+    """
+
+    api_result = build_api_result(prediction)
+    forensic_summary = summarize_forensic_results(forensic_tests)
+    suspicious_tests = extract_suspicious_tests(forensic_tests)
+
+    api_score = prediction.ai_probability / 100.0
+
+    weighted_score_sum = 0.0
+    weight_total = 0.0
+
+    for test in forensic_tests:
+        test_name = str(test.get("test_name", ""))
+        test_score = float(test.get("score", 0.0))
+
+        if test_name == "Semantic Consistency Analysis":
+            weight = 0.6
+        elif test_name in {
+            "Resampling / Scaling Detection",
+            "Edge & Boundary Inconsistency Detection",
+            "Error Level Analysis",
+            "AI Frequency Fingerprint Analysis",
+        }:
+            weight = 1.0
+        else:
+            weight = 0.8
+
+        weighted_score_sum += test_score * weight
+        weight_total += weight
+
+    forensic_score = weighted_score_sum / max(weight_total, 1e-8)
+
+    final_score = round((api_score * 0.65) + (forensic_score * 0.35), 3)
+    final_verdict = "AI-generated" if final_score >= 0.5 else "Real"
+
+    explanation = build_explanation(api_result, forensic_summary)
+
+    return {
+        "api_result": api_result,
+        "forensic_summary": forensic_summary,
+        "final_decision": {
+            "final_score": final_score,
+            "final_verdict": final_verdict,
+        },
+        "explanation": explanation,
+        "suspicious_tests": suspicious_tests,
+        "forensic_results": forensic_tests,
+    }
+
+
+def build_explanation(
+    api_result: dict[str, Any],
+    forensic_summary: dict[str, int],
+) -> str:
+    """
+    Generate a human-readable explanation based on API result and forensic signals.
+    """
+
+    suspicious = forensic_summary["suspicious_count"]
+    total = max(1, forensic_summary["total_tests"])
+    ratio = suspicious / total
+
+    if api_result["verdict"] == "AI-generated":
+        if ratio > 0.6:
+            return (
+                "The AI model indicates a high likelihood of AI generation, "
+                "and multiple forensic analyses detected suspicious patterns, "
+                "reinforcing this conclusion."
+            )
+        elif ratio > 0.3:
+            return (
+                "The AI model suggests the image may be AI-generated, "
+                "and some forensic tests found inconsistencies that support this."
+            )
+        else:
+            return (
+                "The AI model suggests AI generation, but forensic evidence is limited, "
+                "so the result should be interpreted with caution."
+            )
+    else:
+        if ratio < 0.3:
+            return (
+                "The AI model indicates a low likelihood of AI generation, "
+                "and forensic analyses did not detect significant anomalies."
+            )
+        else:
+            return (
+                "The AI model suggests the image is real, but some forensic tests detected "
+                "inconsistencies that may require further review."
+            )
+
+
+def generate_user_summary(report: dict[str, Any]) -> dict[str, str]:
+    """
+    Convert full report into a clean, human-readable summary for users.
+    """
+
+    final = report["final_decision"]
+    suspicious_tests = report.get("suspicious_tests", [])
+    forensic_summary = report.get("forensic_summary", {})
+
+    suspicious_count = forensic_summary.get("suspicious_count", 0)
+    inconclusive_count = forensic_summary.get("inconclusive_count", 0)
+    total_tests = max(1, forensic_summary.get("total_tests", 0))
+
+    forensic_signal_strength = (suspicious_count + (0.5 * inconclusive_count)) / total_tests
+
+    if final["final_verdict"] == "AI-generated":
+        confidence_percent = round(final["final_score"] * 100)
+    else:
+        confidence_percent = round((1 - final["final_score"]) * 100)
+
+    if final["final_verdict"] == "AI-generated":
+        if forensic_signal_strength >= 0.35:
+            summary = "The image is likely AI-generated based on AI analysis and supporting forensic signals."
+        else:
+            summary = "The image is likely AI-generated, but this decision is driven mostly by the AI model because forensic evidence is weak."
+    else:
+        if forensic_signal_strength >= 0.35:
+            summary = "The image is likely authentic, although some forensic signals suggest minor irregularities."
+        else:
+            summary = "The image is likely authentic based on AI analysis and limited forensic concern."
+
+    if suspicious_tests:
+        forensic_insight = "Suspicious patterns detected in: " + ", ".join(suspicious_tests)
+    elif inconclusive_count > 0:
+        forensic_insight = "No strong forensic anomalies detected, but some tests were inconclusive."
+    else:
+        forensic_insight = "No significant forensic anomalies detected."
+
+    if confidence_percent >= 80:
+        recommendation = "High confidence result. No further review needed."
+    elif confidence_percent >= 60:
+        recommendation = "Moderate confidence. Consider additional verification."
+    else:
+        recommendation = "Low confidence. Manual review recommended."
+
+    return {
+        "Final Verdict": final["final_verdict"],
+        "Confidence": f"{confidence_percent}%",
+        "Summary": summary,
+        "Forensic Insight": forensic_insight,
+        "Recommendation": recommendation,
+    }
